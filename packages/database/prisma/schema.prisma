@@ -1,0 +1,162 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model User {
+  id            String       @id @default(cuid())
+  name          String?
+  username      String?      @unique
+  email         String?      @unique
+  emailVerified DateTime?
+  image         String?
+  avatarUrl     String?
+  bio           String?
+  githubId      String?      @unique
+  accounts      Account[]
+  sessions      Session[]
+  components    Component[]
+  votes         Vote[]
+  suggestions   Suggestion[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model Component {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  category    Category
+  tags        String[]     @default([])
+
+  // Code fields — at least one of jsx or html must be present
+  codeJsx     String?      // React/JSX code
+  codeHtml    String?      // Plain HTML
+  codeCss     String?      // CSS (used in both modes)
+  codeJs      String?      // Vanilla JS (html mode only)
+
+  // Relations
+  authorId    String
+  author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  // Fork system
+  forkedFromId String?
+  forkedFrom   Component?  @relation("forks", fields: [forkedFromId], references: [id])
+  forks        Component[] @relation("forks")
+
+  votes       Vote[]
+  suggestions Suggestion[]
+
+  // Denormalized score for fast sorting
+  voteScore   Int          @default(0)
+
+  published   Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([category])
+  @@index([voteScore])
+  @@index([createdAt])
+  @@index([authorId])
+}
+
+model Vote {
+  id          String    @id @default(cuid())
+  value       Int       // +1 or -1 only
+  userId      String
+  componentId String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  component   Component @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, componentId])
+}
+
+model Suggestion {
+  id          String           @id @default(cuid())
+  title       String
+  description String
+
+  // Suggested code (null = no change to that field)
+  codeJsx     String?
+  codeHtml    String?
+  codeCss     String?
+  codeJs      String?
+
+  status      SuggestionStatus @default(PENDING)
+
+  authorId    String
+  componentId String
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  component   Component @relation(fields: [componentId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([componentId])
+  @@index([status])
+}
+
+enum Category {
+  BUTTON
+  CARD
+  INPUT
+  TABS
+  MODAL
+  NAVBAR
+  CHART
+  BADGE
+  TOOLTIP
+  FORM
+  TABLE
+  HERO
+  ANIMATION
+  OTHER
+}
+
+enum SuggestionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
