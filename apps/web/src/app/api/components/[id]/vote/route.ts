@@ -1,10 +1,9 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@openui/database'
 import { rateLimit } from '@/lib/redis'
+import { requireAuth } from '@/lib/api-utils'
 
 // POST /api/components/[id]/vote — Vote on a component
 export async function POST(
@@ -13,13 +12,12 @@ export async function POST(
 ) {
     try {
         const { id } = await params
-        const session = await getServerSession(authOptions)
-        if (!session?.user?.id) {
-            return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        }
+        const { session, error: authError } = await requireAuth()
+        if (authError) return authError
+        const userId = session!.user!.id
 
         // Rate limit: 50 votes per hour per user
-        const limited = await rateLimit(`vote:${session.user.id}`, 50, 3600)
+        const limited = await rateLimit(`vote:${userId}`, 50, 3600)
         if (limited) {
             return Response.json({ error: 'Rate limited' }, { status: 429 })
         }
@@ -32,7 +30,7 @@ export async function POST(
         const existing = await prisma.vote.findUnique({
             where: {
                 userId_componentId: {
-                    userId: session.user.id,
+                    userId,
                     componentId: id,
                 },
             },
@@ -61,11 +59,11 @@ export async function POST(
             prisma.vote.upsert({
                 where: {
                     userId_componentId: {
-                        userId: session.user.id,
+                        userId,
                         componentId: id,
                     },
                 },
-                create: { value, userId: session.user.id, componentId: id },
+                create: { value, userId, componentId: id },
                 update: { value },
             }),
             prisma.component.update({

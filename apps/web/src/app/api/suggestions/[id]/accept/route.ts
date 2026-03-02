@@ -1,9 +1,8 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@openui/database'
+import { requireAuth } from '@/lib/api-utils'
 
 // POST /api/suggestions/[id]/accept — Accept a suggestion (component author only)
 export async function POST(
@@ -12,10 +11,8 @@ export async function POST(
 ) {
     try {
         const { id } = await params
-        const session = await getServerSession(authOptions)
-        if (!session?.user?.id) {
-            return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        }
+        const { session, error: authError } = await requireAuth()
+        if (authError) return authError
 
         const suggestion = await prisma.suggestion.findUnique({
             where: { id },
@@ -25,7 +22,7 @@ export async function POST(
         if (!suggestion) {
             return Response.json({ error: 'Not found' }, { status: 404 })
         }
-        if (suggestion.component.authorId !== session.user.id) {
+        if (suggestion.component.authorId !== session!.user!.id) {
             return Response.json({ error: 'Forbidden' }, { status: 403 })
         }
         if (suggestion.status !== 'PENDING') {

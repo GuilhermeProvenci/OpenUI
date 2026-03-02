@@ -55,6 +55,10 @@ body {
 }
 
 /* Scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-light) var(--color-bg-secondary);
+}
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -137,4 +141,10 @@ body {
 }
 .vote-pulse {
   animation: pulse-vote 0.3s ease-in-out;
+}
+
+/* Spin animation (used by loading spinners) */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

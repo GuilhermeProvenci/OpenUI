@@ -19,7 +19,11 @@ export function buildSandboxHtml(opts: SandboxOptions): string {
   const textColor = opts.theme === 'dark' ? '#e2e8f0' : '#1e293b'
 
   const baseStyles = `
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; scrollbar-width: thin; scrollbar-color: #353548 #111119; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #111119; }
+    ::-webkit-scrollbar-thumb { background: #353548; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
     body {
       background: ${bg};
       color: ${textColor};

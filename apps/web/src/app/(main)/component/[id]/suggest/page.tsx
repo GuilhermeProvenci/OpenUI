@@ -3,16 +3,11 @@
 import { useState, useEffect, use } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import dynamic from 'next/dynamic'
 import { ComponentPreview } from '@/components/ComponentPreview'
+import { CodeTabEditor } from '@/components/CodeTabEditor'
+import { ErrorAlert } from '@/components/ErrorAlert'
+import type { CodeTab } from '@/components/CodeTabEditor'
 import { ArrowLeft, Loader2, GitPullRequest } from 'lucide-react'
-
-const MonacoEditor = dynamic(
-    () => import('@monaco-editor/react').then((mod) => mod.default),
-    { ssr: false, loading: () => <div className="skeleton" style={{ height: '300px' }} /> }
-)
-
-type CodeTab = 'jsx' | 'html' | 'css' | 'js'
 
 export default function SuggestPage({
     params,
@@ -107,14 +102,10 @@ export default function SuggestPage({
         )
     }
 
-    const CODE_TABS: { key: CodeTab; label: string; language: string }[] = [
-        { key: 'jsx', label: 'JSX', language: 'javascript' },
-        { key: 'html', label: 'HTML', language: 'html' },
-        { key: 'css', label: 'CSS', language: 'css' },
-        { key: 'js', label: 'JS', language: 'javascript' },
-    ]
-    const currentCode = { jsx: codeJsx, html: codeHtml, css: codeCss, js: codeJs }
-    const setters = { jsx: setCodeJsx, html: setCodeHtml, css: setCodeCss, js: setCodeJs }
+    const handleCodeChange = (tab: CodeTab, value: string) => {
+        const setters = { jsx: setCodeJsx, html: setCodeHtml, css: setCodeCss, js: setCodeJs }
+        setters[tab](value)
+    }
 
     return (
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '1.5rem 1rem' }}>
@@ -134,11 +125,7 @@ export default function SuggestPage({
                 </button>
             </div>
 
-            {error && (
-                <div style={{ padding: '0.75rem 1rem', borderRadius: '10px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: 'var(--color-error)', fontSize: '0.875rem', marginBottom: '1rem' }}>
-                    {error}
-                </div>
-            )}
+            <ErrorAlert message={error} />
 
             <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
                 <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Suggestion title (e.g., 'Improve hover animation')" style={{ flex: 1, padding: '0.75rem 1rem', borderRadius: '10px', background: 'var(--color-bg-tertiary)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)', fontSize: '0.9375rem', outline: 'none' }} />
@@ -147,16 +134,13 @@ export default function SuggestPage({
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe your changes and why they improve the component..." rows={3} style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', background: 'var(--color-bg-tertiary)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)', fontSize: '0.875rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', marginBottom: '1.5rem' }} />
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                <div style={{ border: '1px solid var(--color-border)', borderRadius: '12px', overflow: 'hidden', background: 'var(--color-bg-card)' }}>
-                    <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border)' }}>
-                        {CODE_TABS.map((tab) => (
-                            <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{ flex: 1, padding: '0.625rem', border: 'none', background: activeTab === tab.key ? 'var(--color-bg-elevated)' : 'transparent', color: activeTab === tab.key ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)', fontSize: '0.8125rem', fontWeight: activeTab === tab.key ? 600 : 400, cursor: 'pointer', borderBottom: activeTab === tab.key ? '2px solid var(--color-brand)' : '2px solid transparent' }}>
-                                {tab.label}
-                            </button>
-                        ))}
-                    </div>
-                    <MonacoEditor height="450px" language={CODE_TABS.find((t) => t.key === activeTab)?.language} value={currentCode[activeTab]} onChange={(val) => setters[activeTab](val || '')} theme="vs-dark" options={{ minimap: { enabled: false }, fontSize: 13, lineNumbers: 'on', scrollBeyondLastLine: false, wordWrap: 'on', padding: { top: 12 }, automaticLayout: true }} />
-                </div>
+                <CodeTabEditor
+                    activeTab={activeTab}
+                    onTabChange={setActiveTab}
+                    code={{ jsx: codeJsx, html: codeHtml, css: codeCss, js: codeJs }}
+                    onCodeChange={handleCodeChange}
+                    height={450}
+                />
                 <div>
                     <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.75rem' }}>Preview with your changes</h3>
                     <div style={{ border: '1px solid var(--color-border)', borderRadius: '12px', overflow: 'hidden' }}>
@@ -164,7 +148,6 @@ export default function SuggestPage({
                     </div>
                 </div>
             </div>
-            <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
         </div>
     )
 }

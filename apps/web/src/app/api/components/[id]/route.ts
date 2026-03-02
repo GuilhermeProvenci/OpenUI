@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@openui/database'
+import { requireAuth, requireAuthor } from '@/lib/api-utils'
 
 // GET /api/components/[id] — Get single component with full details
 export async function GET(
@@ -95,21 +96,11 @@ export async function PUT(
 ) {
     try {
         const { id } = await params
-        const session = await getServerSession(authOptions)
-        if (!session?.user?.id) {
-            return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        }
+        const { session, error: authError } = await requireAuth()
+        if (authError) return authError
 
-        const component = await prisma.component.findUnique({
-            where: { id },
-        })
-
-        if (!component) {
-            return Response.json({ error: 'Not found' }, { status: 404 })
-        }
-        if (component.authorId !== session.user.id) {
-            return Response.json({ error: 'Forbidden' }, { status: 403 })
-        }
+        const { component, error: authorError } = await requireAuthor(id, session!.user!.id)
+        if (authorError) return authorError
 
         const body = (await req.json()) as {
             title?: string
@@ -200,21 +191,11 @@ export async function DELETE(
 ) {
     try {
         const { id } = await params
-        const session = await getServerSession(authOptions)
-        if (!session?.user?.id) {
-            return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        }
+        const { session, error: authError } = await requireAuth()
+        if (authError) return authError
 
-        const component = await prisma.component.findUnique({
-            where: { id },
-        })
-
-        if (!component) {
-            return Response.json({ error: 'Not found' }, { status: 404 })
-        }
-        if (component.authorId !== session.user.id) {
-            return Response.json({ error: 'Forbidden' }, { status: 403 })
-        }
+        const { error: authorError } = await requireAuthor(id, session!.user!.id)
+        if (authorError) return authorError
 
         await prisma.component.update({
             where: { id },
@@ -241,21 +222,11 @@ export async function POST(
             return Response.json({ error: 'Invalid action' }, { status: 400 })
         }
 
-        const session = await getServerSession(authOptions)
-        if (!session?.user?.id) {
-            return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        }
+        const { session, error: authError } = await requireAuth()
+        if (authError) return authError
 
-        const component = await prisma.component.findUnique({
-            where: { id },
-        })
-
-        if (!component) {
-            return Response.json({ error: 'Not found' }, { status: 404 })
-        }
-        if (component.authorId !== session.user.id) {
-            return Response.json({ error: 'Forbidden' }, { status: 403 })
-        }
+        const { error: authorError } = await requireAuthor(id, session!.user!.id)
+        if (authorError) return authorError
 
         await prisma.component.update({
             where: { id },

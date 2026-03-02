@@ -1,9 +1,8 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@openui/database'
+import { requireAuth } from '@/lib/api-utils'
 
 // POST /api/components/[id]/fork — Fork a component
 export async function POST(
@@ -12,10 +11,9 @@ export async function POST(
 ) {
     try {
         const { id } = await params
-        const session = await getServerSession(authOptions)
-        if (!session?.user?.id) {
-            return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        }
+        const { session, error: authError } = await requireAuth()
+        if (authError) return authError
+        const userId = session!.user!.id
 
         const original = await prisma.component.findUnique({
             where: { id },
@@ -35,7 +33,7 @@ export async function POST(
                 codeHtml: original.codeHtml,
                 codeCss: original.codeCss,
                 codeJs: original.codeJs,
-                authorId: session.user.id,
+                authorId: userId,
                 forkedFromId: original.id,
                 voteScore: 0,
                 currentVersion: 1,

@@ -4,52 +4,35 @@ import { Suspense, useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { ComponentCard } from '@/components/ComponentCard'
+import { SortTabs } from '@/components/SortTabs'
+import { ComponentGridSkeleton } from '@/components/ComponentGridSkeleton'
+import { LoadMore } from '@/components/LoadMore'
+import { EmptyState } from '@/components/EmptyState'
 import {
-    Flame,
-    Clock,
-    TrendingUp,
     Code2,
     ThumbsUp,
     GitFork,
     MessageSquare,
     Trophy,
     ChevronRight,
-    ChevronUp,
-    Loader2,
     ArrowDown,
 } from 'lucide-react'
+import { FeatureCard } from '@/components/FeatureCard'
+import { RankedComponentCard } from '@/components/RankedComponentCard'
 import type { ComponentWithAuthor, SortOption } from '@/types'
-
-const SORT_OPTIONS: { value: SortOption; label: string; icon: React.ReactNode }[] = [
-    { value: 'hot', label: 'Hot', icon: <Flame size={15} /> },
-    { value: 'new', label: 'New', icon: <Clock size={15} /> },
-    { value: 'top', label: 'Top', icon: <TrendingUp size={15} /> },
-]
 
 export default function HomePage() {
     return (
-        <Suspense fallback={<HomePageSkeleton />}>
+        <Suspense fallback={
+            <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1rem' }}>
+                <div className="skeleton" style={{ height: '200px', borderRadius: '16px', marginBottom: '2rem' }} />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem' }}>
+                    <ComponentGridSkeleton />
+                </div>
+            </div>
+        }>
             <HomePageContent />
         </Suspense>
-    )
-}
-
-function HomePageSkeleton() {
-    return (
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1rem' }}>
-            <div className="skeleton" style={{ height: '200px', borderRadius: '16px', marginBottom: '2rem' }} />
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem' }}>
-                {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: '16px', overflow: 'hidden' }}>
-                        <div className="skeleton" style={{ height: '180px', borderRadius: 0 }} />
-                        <div style={{ padding: '1rem' }}>
-                            <div className="skeleton" style={{ height: '16px', width: '70%', marginBottom: '0.5rem' }} />
-                            <div className="skeleton" style={{ height: '12px', width: '40%' }} />
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
     )
 }
 
@@ -60,7 +43,6 @@ function HomePageContent() {
 
     // Top 10 state
     const [topWeekly, setTopWeekly] = useState<ComponentWithAuthor[]>([])
-    const [topVotes, setTopVotes] = useState<Record<string, number>>({})
     const [topLoading, setTopLoading] = useState(true)
 
     // Feed state
@@ -79,7 +61,6 @@ function HomePageContent() {
                 const res = await fetch('/api/components?sort=top&period=week&limit=10')
                 const data = await res.json()
                 setTopWeekly(data.items ?? [])
-                setTopVotes(data.userVotes ?? {})
             } catch {
                 // ignore
             } finally {
@@ -122,7 +103,6 @@ function HomePageContent() {
         [sort, cursor, searchQuery]
     )
 
-    // Reset when sort or search changes
     useEffect(() => {
         setComponents([])
         setCursor(null)
@@ -147,7 +127,6 @@ function HomePageContent() {
                     padding: '5rem 1rem 4rem',
                     textAlign: 'center',
                 }}>
-                    {/* Background glow effect */}
                     <div style={{
                         position: 'absolute',
                         top: '-50%',
@@ -253,428 +232,79 @@ function HomePageContent() {
 
             {/* === FEATURE CARDS === */}
             {!isSearching && (
-                <section style={{
-                    maxWidth: '900px',
-                    margin: '0 auto',
-                    padding: '0 1rem 3rem',
-                }}>
+                <section style={{ maxWidth: '900px', margin: '0 auto', padding: '0 1rem 3rem' }}>
                     <div className="feature-grid" style={{
                         display: 'grid',
                         gridTemplateColumns: 'repeat(3, 1fr)',
                         gap: '1rem',
                     }}>
-                        {[
-                            {
-                                icon: <ThumbsUp size={22} />,
-                                title: 'Vote & Discover',
-                                desc: 'Community votes surface the best components. Upvote what you love.',
-                                color: 'var(--color-upvote)',
-                                bg: 'rgba(249, 115, 22, 0.08)',
-                            },
-                            {
-                                icon: <GitFork size={22} />,
-                                title: 'Fork & Remix',
-                                desc: 'Fork any component and make it your own. Build on others\' work.',
-                                color: 'var(--color-brand-light)',
-                                bg: 'rgba(99, 102, 241, 0.08)',
-                            },
-                            {
-                                icon: <MessageSquare size={22} />,
-                                title: 'Suggest Improvements',
-                                desc: 'PR-style suggestions with diff viewer. Collaborate to improve components.',
-                                color: 'var(--color-success)',
-                                bg: 'rgba(34, 197, 94, 0.08)',
-                            },
-                        ].map((f) => (
-                            <div
-                                key={f.title}
-                                style={{
-                                    padding: '1.5rem',
-                                    borderRadius: '14px',
-                                    border: '1px solid var(--color-border)',
-                                    background: 'var(--color-bg-card)',
-                                }}
-                            >
-                                <div style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    width: '44px',
-                                    height: '44px',
-                                    borderRadius: '12px',
-                                    background: f.bg,
-                                    color: f.color,
-                                    marginBottom: '0.875rem',
-                                }}>
-                                    {f.icon}
-                                </div>
-                                <h3 style={{
-                                    fontSize: '0.9375rem',
-                                    fontWeight: 600,
-                                    marginBottom: '0.375rem',
-                                    color: 'var(--color-text-primary)',
-                                }}>
-                                    {f.title}
-                                </h3>
-                                <p style={{
-                                    fontSize: '0.8125rem',
-                                    color: 'var(--color-text-secondary)',
-                                    lineHeight: 1.5,
-                                }}>
-                                    {f.desc}
-                                </p>
-                            </div>
-                        ))}
+                        <FeatureCard icon={<ThumbsUp size={22} />} title="Vote & Discover" description="Community votes surface the best components. Upvote what you love." color="var(--color-upvote)" bg="rgba(249, 115, 22, 0.08)" />
+                        <FeatureCard icon={<GitFork size={22} />} title="Fork & Remix" description="Fork any component and make it your own. Build on others' work." color="var(--color-brand-light)" bg="rgba(99, 102, 241, 0.08)" />
+                        <FeatureCard icon={<MessageSquare size={22} />} title="Suggest Improvements" description="PR-style suggestions with diff viewer. Collaborate to improve components." color="var(--color-success)" bg="rgba(34, 197, 94, 0.08)" />
                     </div>
                 </section>
             )}
 
             {/* === TOP 10 THIS WEEK === */}
             {!isSearching && !topLoading && topWeekly.length > 0 && (
-                <section style={{
-                    maxWidth: '1200px',
-                    margin: '0 auto',
-                    padding: '0 1rem 3rem',
-                }}>
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.625rem',
-                        marginBottom: '1.25rem',
-                    }}>
+                <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1rem 3rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '1.25rem' }}>
                         <Trophy size={20} style={{ color: 'var(--color-accent)' }} />
-                        <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>
-                            Top This Week
-                        </h2>
+                        <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Top This Week</h2>
                     </div>
-
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                        gap: '0.75rem',
-                    }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.75rem' }}>
                         {topWeekly.map((comp, index) => (
-                            <Link
+                            <RankedComponentCard
                                 key={comp.id}
-                                href={`/component/${comp.id}`}
-                                className="card-hover"
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.875rem',
-                                    padding: '0.875rem 1rem',
-                                    borderRadius: '12px',
-                                    border: '1px solid var(--color-border)',
-                                    background: 'var(--color-bg-card)',
-                                    textDecoration: 'none',
-                                }}
-                            >
-                                {/* Rank badge */}
-                                <span style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    width: '32px',
-                                    height: '32px',
-                                    borderRadius: '8px',
-                                    fontSize: '0.8125rem',
-                                    fontWeight: 700,
-                                    flexShrink: 0,
-                                    background: index === 0
-                                        ? 'linear-gradient(135deg, #fbbf24, #f59e0b)'
-                                        : index === 1
-                                            ? 'linear-gradient(135deg, #d1d5db, #9ca3af)'
-                                            : index === 2
-                                                ? 'linear-gradient(135deg, #d97706, #b45309)'
-                                                : 'var(--color-bg-tertiary)',
-                                    color: index < 3 ? '#fff' : 'var(--color-text-secondary)',
-                                }}>
-                                    {index + 1}
-                                </span>
-
-                                {/* Info */}
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{
-                                        fontSize: '0.875rem',
-                                        fontWeight: 600,
-                                        color: 'var(--color-text-primary)',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap',
-                                    }}>
-                                        {comp.title}
-                                    </div>
-                                    <div style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.5rem',
-                                        fontSize: '0.75rem',
-                                        color: 'var(--color-text-muted)',
-                                        marginTop: '0.125rem',
-                                    }}>
-                                        {comp.author?.avatarUrl && (
-                                            <img
-                                                src={comp.author.avatarUrl}
-                                                alt=""
-                                                style={{ width: '14px', height: '14px', borderRadius: '50%' }}
-                                            />
-                                        )}
-                                        <span>{comp.author?.username}</span>
-                                    </div>
-                                </div>
-
-                                {/* Score */}
-                                <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.25rem',
-                                    padding: '0.25rem 0.625rem',
-                                    borderRadius: '6px',
-                                    background: comp.voteScore > 0
-                                        ? 'rgba(249, 115, 22, 0.1)'
-                                        : 'var(--color-bg-tertiary)',
-                                    color: comp.voteScore > 0
-                                        ? 'var(--color-upvote)'
-                                        : 'var(--color-text-secondary)',
-                                    fontSize: '0.8125rem',
-                                    fontWeight: 600,
-                                    flexShrink: 0,
-                                }}>
-                                    <ChevronUp size={14} />
-                                    {comp.voteScore}
-                                </div>
-                            </Link>
+                                id={comp.id}
+                                rank={index + 1}
+                                title={comp.title}
+                                voteScore={comp.voteScore}
+                                author={comp.author}
+                            />
                         ))}
                     </div>
                 </section>
             )}
 
             {/* === BROWSE COMPONENTS (FEED) === */}
-            <section
-                ref={feedRef}
-                style={{
-                    maxWidth: '1200px',
-                    margin: '0 auto',
-                    padding: '0 1rem 3rem',
-                }}
-            >
-                {/* Search indicator */}
+            <section ref={feedRef} style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1rem 3rem' }}>
                 {isSearching && (
-                    <div style={{
-                        marginBottom: '1.5rem',
-                        marginTop: '2rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                    }}>
-                        <span style={{ color: 'var(--color-text-secondary)' }}>
-                            Results for
-                        </span>
-                        <span style={{ fontWeight: 600, color: 'var(--color-brand-light)' }}>
-                            &quot;{searchQuery}&quot;
-                        </span>
+                    <div style={{ marginBottom: '1.5rem', marginTop: '2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ color: 'var(--color-text-secondary)' }}>Results for</span>
+                        <span style={{ fontWeight: 600, color: 'var(--color-brand-light)' }}>&quot;{searchQuery}&quot;</span>
                     </div>
                 )}
 
-                {/* Section header + Sort tabs */}
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '1rem',
-                    marginBottom: '1.5rem',
-                    flexWrap: 'wrap',
-                }}>
-                    {!isSearching && (
-                        <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>
-                            Browse Components
-                        </h2>
-                    )}
-
-                    <div style={{
-                        display: 'flex',
-                        gap: '0.5rem',
-                        padding: '0.25rem',
-                        borderRadius: '12px',
-                        background: 'var(--color-bg-secondary)',
-                        border: '1px solid var(--color-border)',
-                    }}>
-                        {SORT_OPTIONS.map((option) => (
-                            <button
-                                key={option.value}
-                                onClick={() => setSort(option.value)}
-                                className="transition-base"
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.375rem',
-                                    padding: '0.5rem 1rem',
-                                    borderRadius: '8px',
-                                    border: 'none',
-                                    background: sort === option.value ? 'var(--color-bg-elevated)' : 'transparent',
-                                    color: sort === option.value ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)',
-                                    fontSize: '0.8125rem',
-                                    fontWeight: sort === option.value ? 600 : 400,
-                                    cursor: 'pointer',
-                                    boxShadow: sort === option.value ? '0 2px 8px rgba(0,0,0,0.2)' : 'none',
-                                }}
-                            >
-                                {option.icon}
-                                {option.label}
-                            </button>
-                        ))}
-                    </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+                    {!isSearching && <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Browse Components</h2>}
+                    <SortTabs value={sort} onChange={setSort} />
                 </div>
 
-                {/* Components Grid */}
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                    gap: '1.25rem',
-                }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem' }}>
                     {components.map((comp) => (
-                        <ComponentCard
-                            key={comp.id}
-                            component={comp}
-                            userVote={(userVotes[comp.id] as 1 | -1) ?? null}
-                        />
+                        <ComponentCard key={comp.id} component={comp} userVote={(userVotes[comp.id] as 1 | -1) ?? null} />
                     ))}
-
-                    {/* Loading skeletons (initial load) */}
-                    {loading &&
-                        Array.from({ length: 6 }).map((_, i) => (
-                            <div
-                                key={`skeleton-${i}`}
-                                style={{
-                                    background: 'var(--color-bg-card)',
-                                    border: '1px solid var(--color-border)',
-                                    borderRadius: '16px',
-                                    overflow: 'hidden',
-                                }}
-                            >
-                                <div className="skeleton" style={{ height: '180px', borderRadius: 0 }} />
-                                <div style={{ padding: '1rem' }}>
-                                    <div className="skeleton" style={{ height: '16px', width: '70%', marginBottom: '0.5rem' }} />
-                                    <div className="skeleton" style={{ height: '12px', width: '40%', marginBottom: '0.75rem' }} />
-                                    <div className="skeleton" style={{ height: '20px', width: '50px' }} />
-                                </div>
-                            </div>
-                        ))}
+                    {loading && <ComponentGridSkeleton />}
                 </div>
 
-                {/* No results */}
                 {!loading && components.length === 0 && isSearching && (
-                    <div style={{
-                        textAlign: 'center',
-                        padding: '4rem 1rem',
-                        color: 'var(--color-text-tertiary)',
-                    }}>
-                        <p style={{ fontSize: '1.125rem', marginBottom: '0.5rem' }}>
-                            No components found
-                        </p>
-                        <p style={{ fontSize: '0.875rem' }}>
-                            Try a different search term or browse categories
-                        </p>
-                    </div>
+                    <EmptyState title="No components found" description="Try a different search term or browse categories" />
                 )}
 
-                {/* Empty state (no components at all) */}
                 {!loading && components.length === 0 && !isSearching && (
-                    <div style={{
-                        textAlign: 'center',
-                        padding: '3rem 1rem',
-                        color: 'var(--color-text-tertiary)',
-                    }}>
-                        <p style={{ fontSize: '1.125rem', marginBottom: '0.5rem' }}>
-                            No components yet
-                        </p>
-                        <p style={{ fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-                            Be the first to share a component!
-                        </p>
-                        <Link
-                            href="/component/new"
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                padding: '0.625rem 1.5rem',
-                                borderRadius: '10px',
-                                background: 'linear-gradient(135deg, var(--color-brand), var(--color-brand-dark))',
-                                color: 'white',
-                                textDecoration: 'none',
-                                fontSize: '0.875rem',
-                                fontWeight: 600,
-                            }}
-                        >
-                            <Code2 size={16} />
-                            Post a Component
-                        </Link>
-                    </div>
+                    <EmptyState title="No components yet" description="Be the first to share a component!" actionLabel="Post a Component" actionHref="/component/new" actionIcon={<Code2 size={16} />} />
                 )}
 
-                {/* Load More / Showing count */}
                 {!loading && components.length > 0 && (
-                    <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '0.75rem',
-                        marginTop: '2rem',
-                    }}>
-                        <span style={{
-                            fontSize: '0.8125rem',
-                            color: 'var(--color-text-muted)',
-                        }}>
-                            Showing {components.length} components
-                        </span>
-                        {hasMore && (
-                            <button
-                                onClick={() => fetchComponents(false)}
-                                disabled={loadingMore}
-                                className="transition-base"
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem',
-                                    padding: '0.75rem 2rem',
-                                    borderRadius: '12px',
-                                    border: '1px solid var(--color-border)',
-                                    background: 'var(--color-bg-card)',
-                                    color: 'var(--color-text-primary)',
-                                    fontSize: '0.875rem',
-                                    fontWeight: 600,
-                                    cursor: loadingMore ? 'not-allowed' : 'pointer',
-                                }}
-                            >
-                                {loadingMore ? (
-                                    <>
-                                        <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
-                                        Loading...
-                                    </>
-                                ) : (
-                                    'Load more'
-                                )}
-                            </button>
-                        )}
-                        {!hasMore && (
-                            <span style={{
-                                fontSize: '0.8125rem',
-                                color: 'var(--color-text-muted)',
-                            }}>
-                                You&apos;ve reached the end
-                            </span>
-                        )}
-                    </div>
+                    <LoadMore count={components.length} hasMore={hasMore} loading={loadingMore} onLoadMore={() => fetchComponents(false)} />
                 )}
             </section>
 
-            {/* Responsive styles */}
             <style>{`
                 @media (max-width: 768px) {
-                    .feature-grid {
-                        grid-template-columns: 1fr !important;
-                    }
+                    .feature-grid { grid-template-columns: 1fr !important; }
                 }
-                @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
             `}</style>
         </div>
     )

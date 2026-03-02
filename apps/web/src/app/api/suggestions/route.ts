@@ -1,21 +1,19 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@openui/database'
 import { rateLimit } from '@/lib/redis'
+import { requireAuth } from '@/lib/api-utils'
 
 // POST /api/suggestions — Create a suggestion (PR-style)
 export async function POST(req: NextRequest) {
     try {
-        const session = await getServerSession(authOptions)
-        if (!session?.user?.id) {
-            return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        }
+        const { session, error: authError } = await requireAuth()
+        if (authError) return authError
+        const userId = session!.user!.id
 
         // Rate limit: 10 suggestions per day
-        const limited = await rateLimit(`suggest:${session.user.id}`, 10, 86400)
+        const limited = await rateLimit(`suggest:${userId}`, 10, 86400)
         if (limited) {
             return Response.json({ error: 'Rate limited' }, { status: 429 })
         }
@@ -53,7 +51,7 @@ export async function POST(req: NextRequest) {
                 codeHtml: body.codeHtml ?? null,
                 codeCss: body.codeCss ?? null,
                 codeJs: body.codeJs ?? null,
-                authorId: session.user.id,
+                authorId: userId,
                 componentId: body.componentId,
             },
         })

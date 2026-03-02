@@ -14,6 +14,7 @@ import {
     ChevronDown,
 } from 'lucide-react'
 import { CATEGORIES } from '@openui/ui'
+import { Avatar } from '@/components/Avatar'
 
 export function Navbar() {
     const { data: session } = useSession()
@@ -256,35 +257,12 @@ export function Navbar() {
                                     textDecoration: 'none',
                                 }}
                             >
-                                {session.user?.image ? (
-                                    <img
-                                        src={session.user.image}
-                                        alt="Avatar"
-                                        style={{
-                                            width: '32px',
-                                            height: '32px',
-                                            borderRadius: '50%',
-                                            border: '2px solid var(--color-border)',
-                                        }}
-                                    />
-                                ) : (
-                                    <div
-                                        style={{
-                                            width: '32px',
-                                            height: '32px',
-                                            borderRadius: '50%',
-                                            background: 'var(--color-brand)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            color: 'white',
-                                            fontSize: '0.875rem',
-                                            fontWeight: 600,
-                                        }}
-                                    >
-                                        {session.user?.name?.[0] || '?'}
-                                    </div>
-                                )}
+                                <Avatar
+                                    src={session.user?.image}
+                                    alt="Avatar"
+                                    size={32}
+                                    fallback={session.user?.name || '?'}
+                                />
                             </Link>
 
                             <button
