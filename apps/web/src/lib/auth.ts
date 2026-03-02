@@ -26,6 +26,8 @@ export const authOptions: NextAuthOptions = {
         session({ session, user }) {
             if (session.user) {
                 session.user.id = user.id
+                // Expose username (GitHub login) for profile links
+                session.user.username = (user as any).username ?? null
             }
             return session
         },

@@ -15,7 +15,34 @@ export async function GET(req: NextRequest) {
         const sort = (searchParams.get('sort') ?? 'hot') as 'hot' | 'new' | 'top'
         const cursor = searchParams.get('cursor')
         const search = searchParams.get('q')
+        const authorUsername = searchParams.get('author')
+        const includeArchived = searchParams.get('includeArchived') === 'true'
         const limit = 20
+
+        const session = await getServerSession(authOptions)
+
+        // Resolve author username to user ID if filtering by author
+        let authorFilter: Prisma.ComponentWhereInput = {}
+        let profileUser: any = null
+        if (authorUsername) {
+            profileUser = await prisma.user.findUnique({
+                where: { username: authorUsername },
+                select: { id: true, username: true, avatarUrl: true, bio: true, createdAt: true },
+            })
+            if (!profileUser) {
+                return Response.json({ items: [], nextCursor: null, userVotes: {}, profileUser: null })
+            }
+            authorFilter = { authorId: profileUser.id }
+        }
+
+        // Only the profile owner can see their own archived (unpublished) components
+        const isOwnProfile = profileUser && session?.user?.id === profileUser.id
+        let publishedFilter: Prisma.ComponentWhereInput
+        if (includeArchived && isOwnProfile) {
+            publishedFilter = {} // show all (published + archived)
+        } else {
+            publishedFilter = { published: true }
+        }
 
         const orderBy = {
             hot: [{ voteScore: 'desc' as const }, { createdAt: 'desc' as const }],
@@ -24,7 +51,8 @@ export async function GET(req: NextRequest) {
         }[sort] as Prisma.ComponentOrderByWithRelationInput[]
 
         const where: Prisma.ComponentWhereInput = {
-            published: true,
+            ...publishedFilter,
+            ...authorFilter,
             ...(category ? { category } : {}),
             ...(cursor ? { createdAt: { lt: new Date(cursor) } } : {}),
             ...(search
@@ -53,7 +81,26 @@ export async function GET(req: NextRequest) {
             ? items[items.length - 1].createdAt.toISOString()
             : null
 
-        return Response.json({ items, nextCursor })
+        // Batch fetch user votes for all returned components
+        let userVotes: Record<string, number> = {}
+        if (session?.user?.id) {
+            const componentIds = items.map((c) => c.id)
+            const votes = await prisma.vote.findMany({
+                where: {
+                    userId: session.user.id,
+                    componentId: { in: componentIds },
+                },
+                select: { componentId: true, value: true },
+            })
+            userVotes = Object.fromEntries(votes.map((v) => [v.componentId, v.value]))
+        }
+
+        return Response.json({
+            items,
+            nextCursor,
+            userVotes,
+            ...(profileUser ? { profileUser } : {}),
+        })
     } catch (error) {
         console.error('[GET /api/components]', error)
         return Response.json({ error: 'Internal server error' }, { status: 500 })
@@ -128,6 +175,20 @@ export async function POST(req: NextRequest) {
                 codeCss: body.codeCss || null,
                 codeJs: body.codeJs || null,
                 authorId: session.user.id,
+                currentVersion: 1,
+            },
+        })
+
+        // Create initial version (v1)
+        await prisma.componentVersion.create({
+            data: {
+                version: 1,
+                componentId: component.id,
+                codeJsx: component.codeJsx,
+                codeHtml: component.codeHtml,
+                codeCss: component.codeCss,
+                codeJs: component.codeJs,
+                changeNote: 'Initial version',
             },
         })
 

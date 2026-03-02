@@ -43,6 +43,15 @@ export async function GET(
                         author: { select: { username: true, avatarUrl: true } },
                     },
                 },
+                versions: {
+                    orderBy: { version: 'desc' },
+                    select: {
+                        id: true,
+                        version: true,
+                        changeNote: true,
+                        createdAt: true,
+                    },
+                },
                 _count: {
                     select: { votes: true, suggestions: true, forks: true },
                 },
@@ -51,6 +60,11 @@ export async function GET(
 
         if (!component) {
             return Response.json({ error: 'Not found' }, { status: 404 })
+        }
+
+        // If unpublished, only the author can see it
+        if (!component.published && component.authorId !== session?.user?.id) {
+            return Response.json({ error: 'This component was removed by its author' }, { status: 410 })
         }
 
         // Get user's vote if authenticated
@@ -106,32 +120,80 @@ export async function PUT(
             codeHtml?: string
             codeCss?: string
             codeJs?: string
+            createNewVersion?: boolean
+            changeNote?: string
         }
 
-        const updated = await prisma.component.update({
-            where: { id },
-            data: {
-                ...(body.title && { title: body.title }),
-                ...(body.description !== undefined && {
-                    description: body.description,
-                }),
-                ...(body.category && { category: body.category as any }),
-                ...(body.tags && { tags: body.tags.map((t) => t.toLowerCase()) }),
-                ...(body.codeJsx !== undefined && { codeJsx: body.codeJsx }),
-                ...(body.codeHtml !== undefined && { codeHtml: body.codeHtml }),
-                ...(body.codeCss !== undefined && { codeCss: body.codeCss }),
-                ...(body.codeJs !== undefined && { codeJs: body.codeJs }),
-            },
-        })
+        const componentData = {
+            ...(body.title && { title: body.title }),
+            ...(body.description !== undefined && {
+                description: body.description,
+            }),
+            ...(body.category && { category: body.category as any }),
+            ...(body.tags && { tags: body.tags.map((t) => t.toLowerCase()) }),
+            ...(body.codeJsx !== undefined && { codeJsx: body.codeJsx }),
+            ...(body.codeHtml !== undefined && { codeHtml: body.codeHtml }),
+            ...(body.codeCss !== undefined && { codeCss: body.codeCss }),
+            ...(body.codeJs !== undefined && { codeJs: body.codeJs }),
+        }
 
-        return Response.json(updated)
+        if (body.createNewVersion) {
+            // Create a new version: update component + create ComponentVersion + increment currentVersion
+            const newVersion = component.currentVersion + 1
+            const [updated] = await prisma.$transaction([
+                prisma.component.update({
+                    where: { id },
+                    data: {
+                        ...componentData,
+                        currentVersion: newVersion,
+                    },
+                }),
+                prisma.componentVersion.create({
+                    data: {
+                        version: newVersion,
+                        componentId: id,
+                        codeJsx: body.codeJsx ?? component.codeJsx,
+                        codeHtml: body.codeHtml ?? component.codeHtml,
+                        codeCss: body.codeCss ?? component.codeCss,
+                        codeJs: body.codeJs ?? component.codeJs,
+                        changeNote: body.changeNote || `Version ${newVersion}`,
+                    },
+                }),
+            ])
+            return Response.json(updated)
+        } else {
+            // Overwrite current version: update component + update the current ComponentVersion's code
+            const [updated] = await prisma.$transaction([
+                prisma.component.update({
+                    where: { id },
+                    data: componentData,
+                }),
+                prisma.componentVersion.update({
+                    where: {
+                        componentId_version: {
+                            componentId: id,
+                            version: component.currentVersion,
+                        },
+                    },
+                    data: {
+                        ...(body.codeJsx !== undefined && { codeJsx: body.codeJsx }),
+                        ...(body.codeHtml !== undefined && { codeHtml: body.codeHtml }),
+                        ...(body.codeCss !== undefined && { codeCss: body.codeCss }),
+                        ...(body.codeJs !== undefined && { codeJs: body.codeJs }),
+                    },
+                }),
+            ])
+            return Response.json(updated)
+        }
     } catch (error) {
         console.error('[PUT /api/components/[id]]', error)
         return Response.json({ error: 'Internal server error' }, { status: 500 })
     }
 }
 
-// DELETE /api/components/[id] — Delete component (author only)
+// DELETE /api/components/[id] — Soft delete component (author only)
+// Sets published=false instead of actually deleting, so forks, votes,
+// and suggestions remain intact.
 export async function DELETE(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> }
@@ -154,11 +216,55 @@ export async function DELETE(
             return Response.json({ error: 'Forbidden' }, { status: 403 })
         }
 
-        await prisma.component.delete({ where: { id } })
+        await prisma.component.update({
+            where: { id },
+            data: { published: false },
+        })
 
         return Response.json({ success: true })
     } catch (error) {
         console.error('[DELETE /api/components/[id]]', error)
+        return Response.json({ error: 'Internal server error' }, { status: 500 })
+    }
+}
+
+// POST /api/components/[id] — Restore (republish) a soft-deleted component (author only)
+export async function POST(
+    req: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const { id } = await params
+        const body = (await req.json()) as { action?: string }
+
+        if (body.action !== 'restore') {
+            return Response.json({ error: 'Invalid action' }, { status: 400 })
+        }
+
+        const session = await getServerSession(authOptions)
+        if (!session?.user?.id) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        const component = await prisma.component.findUnique({
+            where: { id },
+        })
+
+        if (!component) {
+            return Response.json({ error: 'Not found' }, { status: 404 })
+        }
+        if (component.authorId !== session.user.id) {
+            return Response.json({ error: 'Forbidden' }, { status: 403 })
+        }
+
+        await prisma.component.update({
+            where: { id },
+            data: { published: true },
+        })
+
+        return Response.json({ success: true })
+    } catch (error) {
+        console.error('[POST /api/components/[id]]', error)
         return Response.json({ error: 'Internal server error' }, { status: 500 })
     }
 }

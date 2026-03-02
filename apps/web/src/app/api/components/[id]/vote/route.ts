@@ -47,7 +47,11 @@ export async function POST(
                     data: { voteScore: { decrement: value } },
                 }),
             ])
-            return Response.json({ score: 'decremented', userVote: null })
+            const updated = await prisma.component.findUnique({
+                where: { id },
+                select: { voteScore: true },
+            })
+            return Response.json({ voteScore: updated!.voteScore, userVote: null })
         }
 
         // Switching vote counts double
@@ -70,7 +74,11 @@ export async function POST(
             }),
         ])
 
-        return Response.json({ score: 'updated', userVote: value })
+        const updated = await prisma.component.findUnique({
+            where: { id },
+            select: { voteScore: true },
+        })
+        return Response.json({ voteScore: updated!.voteScore, userVote: value })
     } catch (error) {
         console.error('[POST /api/components/[id]/vote]', error)
         return Response.json({ error: 'Internal server error' }, { status: 500 })

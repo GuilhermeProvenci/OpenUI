@@ -7,6 +7,7 @@ import { ComponentPreview } from '@/components/ComponentPreview'
 import { VoteButton } from '@/components/VoteButton'
 import { CategoryBadge } from '@/components/CategoryBadge'
 import { formatDate, downloadCode } from '@openui/ui'
+import { SuggestionDiff } from '@/components/SuggestionDiff'
 import {
     GitFork,
     MessageSquare,
@@ -18,6 +19,10 @@ import {
     ExternalLink,
     Check,
     X,
+    ChevronDown,
+    ChevronRight,
+    History,
+    Archive,
 } from 'lucide-react'
 
 type CodeTab = 'preview' | 'jsx' | 'html' | 'css' | 'js'
@@ -33,13 +38,24 @@ export default function ComponentDetailPage({
 
     const [component, setComponent] = useState<any>(null)
     const [loading, setLoading] = useState(true)
+    const [removed, setRemoved] = useState(false)
     const [activeTab, setActiveTab] = useState<CodeTab>('preview')
     const [forking, setForking] = useState(false)
+    const [expandedDiffs, setExpandedDiffs] = useState<Set<string>>(new Set())
+    const [selectedVersion, setSelectedVersion] = useState<number | null>(null)
+    const [versionCode, setVersionCode] = useState<any>(null)
+    const [loadingVersion, setLoadingVersion] = useState(false)
+    const [archiving, setArchiving] = useState(false)
+    const [showArchiveConfirm, setShowArchiveConfirm] = useState(false)
 
     useEffect(() => {
         async function load() {
             try {
                 const res = await fetch(`/api/components/${id}`)
+                if (res.status === 410) {
+                    setRemoved(true)
+                    return
+                }
                 if (!res.ok) throw new Error('Not found')
                 const data = await res.json()
                 setComponent(data)
@@ -51,6 +67,52 @@ export default function ComponentDetailPage({
         }
         load()
     }, [id, router])
+
+    function toggleDiff(sugId: string) {
+        setExpandedDiffs((prev) => {
+            const next = new Set(prev)
+            if (next.has(sugId)) next.delete(sugId)
+            else next.add(sugId)
+            return next
+        })
+    }
+
+    async function loadVersion(version: number) {
+        if (selectedVersion === version) {
+            // Deselect — go back to current
+            setSelectedVersion(null)
+            setVersionCode(null)
+            return
+        }
+        setLoadingVersion(true)
+        try {
+            const res = await fetch(`/api/components/${id}/versions/${version}`)
+            if (res.ok) {
+                const data = await res.json()
+                setVersionCode(data)
+                setSelectedVersion(version)
+            }
+        } catch {
+            // ignore
+        } finally {
+            setLoadingVersion(false)
+        }
+    }
+
+    async function handleArchive() {
+        setArchiving(true)
+        try {
+            const res = await fetch(`/api/components/${id}`, { method: 'DELETE' })
+            if (res.ok) {
+                router.push(`/profile/${component?.author?.username || 'me'}`)
+            }
+        } catch {
+            alert('Failed to archive component')
+        } finally {
+            setArchiving(false)
+            setShowArchiveConfirm(false)
+        }
+    }
 
     async function handleFork() {
         if (!session) {
@@ -83,6 +145,33 @@ export default function ComponentDetailPage({
         )
     }
 
+    if (removed) {
+        return (
+            <div style={{ maxWidth: '600px', margin: '4rem auto', textAlign: 'center', padding: '2rem' }}>
+                <Archive size={48} style={{ color: 'var(--color-text-muted)', marginBottom: '1rem' }} />
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                    Component Removed
+                </h2>
+                <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
+                    This component was archived by its author.
+                </p>
+                <a
+                    href="/"
+                    style={{
+                        padding: '0.625rem 1.5rem',
+                        borderRadius: '10px',
+                        background: 'var(--color-bg-tertiary)',
+                        color: 'var(--color-text-primary)',
+                        textDecoration: 'none',
+                        fontSize: '0.875rem',
+                    }}
+                >
+                    Back to feed
+                </a>
+            </div>
+        )
+    }
+
     if (!component) return null
 
     const isAuthor = session?.user?.id === component.author?.id
@@ -95,11 +184,16 @@ export default function ComponentDetailPage({
         { key: 'js', label: 'JS', hasContent: !!component.codeJs },
     ] as { key: CodeTab; label: string; hasContent: boolean }[]).filter((t) => t.hasContent)
 
+    // Use version code if a specific version is selected, otherwise current
+    const displayCode = selectedVersion && versionCode
+        ? versionCode
+        : component
+
     const codeMap: Record<string, string | null> = {
-        jsx: component.codeJsx,
-        html: component.codeHtml,
-        css: component.codeCss,
-        js: component.codeJs,
+        jsx: displayCode.codeJsx,
+        html: displayCode.codeHtml,
+        css: displayCode.codeCss,
+        js: displayCode.codeJs,
     }
 
     return (
@@ -227,25 +321,112 @@ export default function ComponentDetailPage({
                 {/* Actions */}
                 <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
                     {isAuthor && (
-                        <a
-                            href={`/component/${id}/edit`}
-                            className="transition-base"
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.375rem',
-                                padding: '0.5rem 0.875rem',
-                                borderRadius: '8px',
-                                border: '1px solid var(--color-border)',
-                                background: 'transparent',
-                                color: 'var(--color-text-secondary)',
-                                textDecoration: 'none',
-                                fontSize: '0.8125rem',
-                            }}
-                        >
-                            <Edit size={14} />
-                            Edit
-                        </a>
+                        <>
+                            <a
+                                href={`/component/${id}/edit`}
+                                className="transition-base"
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.375rem',
+                                    padding: '0.5rem 0.875rem',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--color-border)',
+                                    background: 'transparent',
+                                    color: 'var(--color-text-secondary)',
+                                    textDecoration: 'none',
+                                    fontSize: '0.8125rem',
+                                }}
+                            >
+                                <Edit size={14} />
+                                Edit
+                            </a>
+                            <div style={{ position: 'relative' }}>
+                                <button
+                                    onClick={() => setShowArchiveConfirm(!showArchiveConfirm)}
+                                    className="transition-base"
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.375rem',
+                                        padding: '0.5rem 0.875rem',
+                                        borderRadius: '8px',
+                                        border: '1px solid var(--color-border)',
+                                        background: 'transparent',
+                                        color: 'var(--color-text-tertiary)',
+                                        fontSize: '0.8125rem',
+                                        cursor: 'pointer',
+                                    }}
+                                    title="Archive this component"
+                                >
+                                    <Archive size={14} />
+                                    Archive
+                                </button>
+                                {showArchiveConfirm && (
+                                    <>
+                                        <div
+                                            style={{ position: 'fixed', inset: 0, zIndex: 40 }}
+                                            onClick={() => setShowArchiveConfirm(false)}
+                                        />
+                                        <div
+                                            className="glass"
+                                            style={{
+                                                position: 'absolute',
+                                                top: '100%',
+                                                right: 0,
+                                                marginTop: '0.5rem',
+                                                padding: '1rem',
+                                                borderRadius: '12px',
+                                                minWidth: '260px',
+                                                zIndex: 50,
+                                                boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+                                            }}
+                                        >
+                                            <p style={{
+                                                fontSize: '0.8125rem',
+                                                color: 'var(--color-text-secondary)',
+                                                marginBottom: '0.75rem',
+                                                lineHeight: 1.4,
+                                            }}>
+                                                Archive this component? It will be hidden from the feed but forks and votes are preserved. You can restore it later from your profile.
+                                            </p>
+                                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                                <button
+                                                    onClick={() => setShowArchiveConfirm(false)}
+                                                    style={{
+                                                        padding: '0.375rem 0.75rem',
+                                                        borderRadius: '6px',
+                                                        border: '1px solid var(--color-border)',
+                                                        background: 'transparent',
+                                                        color: 'var(--color-text-secondary)',
+                                                        fontSize: '0.75rem',
+                                                        cursor: 'pointer',
+                                                    }}
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    onClick={handleArchive}
+                                                    disabled={archiving}
+                                                    style={{
+                                                        padding: '0.375rem 0.75rem',
+                                                        borderRadius: '6px',
+                                                        border: '1px solid var(--color-error)',
+                                                        background: 'rgba(239, 68, 68, 0.1)',
+                                                        color: 'var(--color-error)',
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 600,
+                                                        cursor: archiving ? 'not-allowed' : 'pointer',
+                                                    }}
+                                                >
+                                                    {archiving ? 'Archiving...' : 'Yes, archive'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </>
                     )}
                     <button
                         onClick={handleFork}
@@ -288,6 +469,44 @@ export default function ComponentDetailPage({
                     </a>
                 </div>
             </div>
+
+            {/* Version indicator */}
+            {selectedVersion && (
+                <div
+                    style={{
+                        padding: '0.625rem 1rem',
+                        borderRadius: '10px',
+                        background: 'rgba(99, 102, 241, 0.1)',
+                        border: '1px solid rgba(99, 102, 241, 0.2)',
+                        color: 'var(--color-brand-light)',
+                        fontSize: '0.8125rem',
+                        marginBottom: '1rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                    }}
+                >
+                    <span>
+                        <History size={14} style={{ verticalAlign: 'middle', marginRight: '0.375rem' }} />
+                        Viewing version {selectedVersion}
+                        {versionCode?.changeNote && ` — ${versionCode.changeNote}`}
+                    </span>
+                    <button
+                        onClick={() => { setSelectedVersion(null); setVersionCode(null) }}
+                        style={{
+                            padding: '0.25rem 0.75rem',
+                            borderRadius: '6px',
+                            border: '1px solid var(--color-brand-light)',
+                            background: 'transparent',
+                            color: 'var(--color-brand-light)',
+                            fontSize: '0.75rem',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        Back to latest
+                    </button>
+                </div>
+            )}
 
             {/* Code Tabs & Preview */}
             <div
@@ -369,7 +588,7 @@ export default function ComponentDetailPage({
 
                 {/* Content */}
                 {activeTab === 'preview' ? (
-                    <ComponentPreview component={component} height={450} />
+                    <ComponentPreview component={displayCode} height={450} />
                 ) : (
                     <pre
                         style={{
@@ -538,9 +757,149 @@ export default function ComponentDetailPage({
                                     )}
                                     <span>{sug.author.username}</span>
                                     <span>· {formatDate(sug.createdAt)}</span>
+                                    <button
+                                        onClick={() => toggleDiff(sug.id)}
+                                        className="transition-base"
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.25rem',
+                                            marginLeft: '0.5rem',
+                                            padding: '0.2rem 0.5rem',
+                                            borderRadius: '4px',
+                                            border: '1px solid var(--color-border)',
+                                            background: expandedDiffs.has(sug.id) ? 'var(--color-bg-elevated)' : 'transparent',
+                                            color: 'var(--color-text-secondary)',
+                                            fontSize: '0.6875rem',
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        {expandedDiffs.has(sug.id) ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                                        View Diff
+                                    </button>
                                 </div>
+
+                                {/* Expandable diff */}
+                                {expandedDiffs.has(sug.id) && (
+                                    <SuggestionDiff
+                                        original={component}
+                                        suggestion={sug}
+                                    />
+                                )}
                             </div>
                         ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Version History */}
+            {component.versions?.length > 0 && (
+                <div style={{ marginBottom: '2rem' }}>
+                    <h2
+                        style={{
+                            fontSize: '1.25rem',
+                            fontWeight: 600,
+                            marginBottom: '1rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                        }}
+                    >
+                        <History size={18} />
+                        Versions ({component.versions.length})
+                    </h2>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {component.versions.map((ver: any) => {
+                            const isCurrent = ver.version === component.currentVersion
+                            const isSelected = selectedVersion === ver.version
+                            return (
+                                <button
+                                    key={ver.id}
+                                    onClick={() => {
+                                        if (isCurrent) {
+                                            setSelectedVersion(null)
+                                            setVersionCode(null)
+                                        } else {
+                                            loadVersion(ver.version)
+                                        }
+                                    }}
+                                    disabled={loadingVersion}
+                                    className="transition-base"
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.75rem',
+                                        padding: '0.75rem 1rem',
+                                        borderRadius: '10px',
+                                        border: isSelected
+                                            ? '1px solid var(--color-brand)'
+                                            : '1px solid var(--color-border)',
+                                        background: isSelected
+                                            ? 'rgba(99, 102, 241, 0.08)'
+                                            : 'var(--color-bg-card)',
+                                        cursor: 'pointer',
+                                        textAlign: 'left',
+                                    }}
+                                >
+                                    <span
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            width: '32px',
+                                            height: '32px',
+                                            borderRadius: '8px',
+                                            background: isCurrent
+                                                ? 'linear-gradient(135deg, var(--color-brand), var(--color-brand-dark))'
+                                                : 'var(--color-bg-tertiary)',
+                                            color: isCurrent ? 'white' : 'var(--color-text-secondary)',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 700,
+                                            flexShrink: 0,
+                                        }}
+                                    >
+                                        v{ver.version}
+                                    </span>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div
+                                            style={{
+                                                fontSize: '0.8125rem',
+                                                fontWeight: 500,
+                                                color: 'var(--color-text-primary)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.5rem',
+                                            }}
+                                        >
+                                            {ver.changeNote || `Version ${ver.version}`}
+                                            {isCurrent && (
+                                                <span
+                                                    style={{
+                                                        fontSize: '0.625rem',
+                                                        padding: '0.1rem 0.4rem',
+                                                        borderRadius: '4px',
+                                                        background: 'rgba(34, 197, 94, 0.15)',
+                                                        color: 'var(--color-success)',
+                                                        fontWeight: 600,
+                                                    }}
+                                                >
+                                                    CURRENT
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div
+                                            style={{
+                                                fontSize: '0.6875rem',
+                                                color: 'var(--color-text-muted)',
+                                                marginTop: '0.125rem',
+                                            }}
+                                        >
+                                            {formatDate(ver.createdAt)}
+                                        </div>
+                                    </div>
+                                </button>
+                            )
+                        })}
                     </div>
                 </div>
             )}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { Suspense, useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ComponentCard } from '@/components/ComponentCard'
 import { Flame, Clock, TrendingUp, Sparkles, Code2 } from 'lucide-react'
@@ -13,10 +13,33 @@ const SORT_OPTIONS: { value: SortOption; label: string; icon: React.ReactNode }[
 ]
 
 export default function HomePage() {
+    return (
+        <Suspense fallback={
+            <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem' }}>
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: '16px', overflow: 'hidden' }}>
+                            <div className="skeleton" style={{ height: '180px', borderRadius: 0 }} />
+                            <div style={{ padding: '1rem' }}>
+                                <div className="skeleton" style={{ height: '16px', width: '70%', marginBottom: '0.5rem' }} />
+                                <div className="skeleton" style={{ height: '12px', width: '40%' }} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        }>
+            <HomePageContent />
+        </Suspense>
+    )
+}
+
+function HomePageContent() {
     const searchParams = useSearchParams()
     const searchQuery = searchParams.get('q') || ''
 
     const [components, setComponents] = useState<ComponentWithAuthor[]>([])
+    const [userVotes, setUserVotes] = useState<Record<string, number>>({})
     const [sort, setSort] = useState<SortOption>('hot')
     const [cursor, setCursor] = useState<string | null>(null)
     const [hasMore, setHasMore] = useState(true)
@@ -37,8 +60,10 @@ export default function HomePage() {
 
                 if (reset) {
                     setComponents(data.items)
+                    setUserVotes(data.userVotes ?? {})
                 } else {
                     setComponents((prev) => [...prev, ...data.items])
+                    setUserVotes((prev) => ({ ...prev, ...(data.userVotes ?? {}) }))
                 }
                 setCursor(data.nextCursor)
                 setHasMore(!!data.nextCursor)
@@ -236,7 +261,11 @@ export default function HomePage() {
                 }}
             >
                 {components.map((comp) => (
-                    <ComponentCard key={comp.id} component={comp} />
+                    <ComponentCard
+                        key={comp.id}
+                        component={comp}
+                        userVote={(userVotes[comp.id] as 1 | -1) ?? null}
+                    />
                 ))}
 
                 {/* Loading skeletons */}

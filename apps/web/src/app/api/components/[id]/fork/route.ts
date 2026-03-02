@@ -38,6 +38,20 @@ export async function POST(
                 authorId: session.user.id,
                 forkedFromId: original.id,
                 voteScore: 0,
+                currentVersion: 1,
+            },
+        })
+
+        // Create initial version (v1) for the fork
+        await prisma.componentVersion.create({
+            data: {
+                version: 1,
+                componentId: fork.id,
+                codeJsx: fork.codeJsx,
+                codeHtml: fork.codeHtml,
+                codeCss: fork.codeCss,
+                codeJs: fork.codeJs,
+                changeNote: 'Initial version (forked)',
             },
         })
 

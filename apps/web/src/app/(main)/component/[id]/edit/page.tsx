@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { ComponentPreview } from '@/components/ComponentPreview'
 import { CATEGORIES } from '@openui/ui'
-import { ArrowLeft, Loader2, Save } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, GitBranch } from 'lucide-react'
 
 const MonacoEditor = dynamic(
     () => import('@monaco-editor/react').then((mod) => mod.default),
@@ -33,9 +33,12 @@ export default function EditComponentPage({
     const [codeCss, setCodeCss] = useState('')
     const [codeJs, setCodeJs] = useState('')
     const [activeTab, setActiveTab] = useState<CodeTab>('jsx')
+    const [createNewVersion, setCreateNewVersion] = useState(false)
+    const [changeNote, setChangeNote] = useState('')
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(true)
+    const [currentVersion, setCurrentVersion] = useState(1)
 
     useEffect(() => {
         async function load() {
@@ -51,6 +54,7 @@ export default function EditComponentPage({
                 setCodeHtml(data.codeHtml || '')
                 setCodeCss(data.codeCss || '')
                 setCodeJs(data.codeJs || '')
+                if (data.currentVersion) setCurrentVersion(data.currentVersion)
                 if (data.codeHtml && !data.codeJsx) setActiveTab('html')
             } catch {
                 router.push('/')
@@ -78,6 +82,8 @@ export default function EditComponentPage({
                     codeHtml: codeHtml || undefined,
                     codeCss: codeCss || undefined,
                     codeJs: codeJs || undefined,
+                    createNewVersion,
+                    changeNote: createNewVersion ? changeNote : undefined,
                 }),
             })
             if (!res.ok) {
@@ -142,6 +148,74 @@ export default function EditComponentPage({
                         </select>
                         <input type="text" value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder="Tags" style={{ flex: 1, padding: '0.625rem 0.75rem', borderRadius: '10px', background: 'var(--color-bg-tertiary)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)', fontSize: '0.875rem', outline: 'none' }} />
                     </div>
+                    {/* Version toggle */}
+                    <div style={{
+                        padding: '0.75rem 1rem',
+                        borderRadius: '10px',
+                        border: '1px solid var(--color-border)',
+                        background: createNewVersion ? 'rgba(99, 102, 241, 0.05)' : 'var(--color-bg-card)',
+                    }}>
+                        <label style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.625rem',
+                            cursor: 'pointer',
+                            fontSize: '0.8125rem',
+                        }}>
+                            <div
+                                onClick={() => setCreateNewVersion(!createNewVersion)}
+                                style={{
+                                    width: '36px',
+                                    height: '20px',
+                                    borderRadius: '10px',
+                                    background: createNewVersion ? 'var(--color-brand)' : 'var(--color-bg-tertiary)',
+                                    border: `1px solid ${createNewVersion ? 'var(--color-brand)' : 'var(--color-border)'}`,
+                                    position: 'relative',
+                                    transition: 'all 0.2s',
+                                    flexShrink: 0,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                <div style={{
+                                    width: '14px',
+                                    height: '14px',
+                                    borderRadius: '50%',
+                                    background: 'white',
+                                    position: 'absolute',
+                                    top: '2px',
+                                    left: createNewVersion ? '19px' : '2px',
+                                    transition: 'left 0.2s',
+                                }} />
+                            </div>
+                            <GitBranch size={14} style={{ color: createNewVersion ? 'var(--color-brand-light)' : 'var(--color-text-tertiary)' }} />
+                            <span style={{ color: 'var(--color-text-primary)', fontWeight: 500 }}>
+                                Create new version (v{currentVersion + 1})
+                            </span>
+                            <span style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>
+                                {createNewVersion ? 'A new version will be created' : 'Current version will be updated in-place'}
+                            </span>
+                        </label>
+                        {createNewVersion && (
+                            <input
+                                type="text"
+                                value={changeNote}
+                                onChange={(e) => setChangeNote(e.target.value)}
+                                placeholder={`What changed in v${currentVersion + 1}?`}
+                                style={{
+                                    marginTop: '0.625rem',
+                                    width: '100%',
+                                    padding: '0.5rem 0.75rem',
+                                    borderRadius: '8px',
+                                    background: 'var(--color-bg-tertiary)',
+                                    border: '1px solid var(--color-border)',
+                                    color: 'var(--color-text-primary)',
+                                    fontSize: '0.8125rem',
+                                    outline: 'none',
+                                }}
+                            />
+                        )}
+                    </div>
+
                     <div style={{ border: '1px solid var(--color-border)', borderRadius: '12px', overflow: 'hidden', background: 'var(--color-bg-card)' }}>
                         <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border)' }}>
                             {CODE_TABS.map((tab) => (

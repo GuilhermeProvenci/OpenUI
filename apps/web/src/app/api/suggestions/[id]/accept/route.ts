@@ -32,22 +32,39 @@ export async function POST(
             return Response.json({ error: 'Already resolved' }, { status: 409 })
         }
 
+        const newVersion = suggestion.component.currentVersion + 1
+
+        // Compute the merged code (suggestion fields override component fields)
+        const mergedCode = {
+            codeJsx: suggestion.codeJsx !== null ? suggestion.codeJsx : suggestion.component.codeJsx,
+            codeHtml: suggestion.codeHtml !== null ? suggestion.codeHtml : suggestion.component.codeHtml,
+            codeCss: suggestion.codeCss !== null ? suggestion.codeCss : suggestion.component.codeCss,
+            codeJs: suggestion.codeJs !== null ? suggestion.codeJs : suggestion.component.codeJs,
+        }
+
         await prisma.$transaction([
             prisma.component.update({
                 where: { id: suggestion.componentId },
                 data: {
-                    // Only overwrite fields that were actually suggested (non-null)
-                    ...(suggestion.codeJsx !== null && { codeJsx: suggestion.codeJsx }),
-                    ...(suggestion.codeHtml !== null && {
-                        codeHtml: suggestion.codeHtml,
-                    }),
-                    ...(suggestion.codeCss !== null && { codeCss: suggestion.codeCss }),
-                    ...(suggestion.codeJs !== null && { codeJs: suggestion.codeJs }),
+                    ...mergedCode,
+                    currentVersion: newVersion,
                 },
             }),
             prisma.suggestion.update({
                 where: { id },
                 data: { status: 'ACCEPTED' },
+            }),
+            prisma.componentVersion.create({
+                data: {
+                    version: newVersion,
+                    componentId: suggestion.componentId,
+                    codeJsx: mergedCode.codeJsx,
+                    codeHtml: mergedCode.codeHtml,
+                    codeCss: mergedCode.codeCss,
+                    codeJs: mergedCode.codeJs,
+                    changeNote: suggestion.title,
+                    suggestionId: suggestion.id,
+                },
             }),
         ])
 

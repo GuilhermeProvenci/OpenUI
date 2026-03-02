@@ -249,7 +249,7 @@ export function Navbar() {
                             </Link>
 
                             <Link
-                                href={`/profile/${session.user?.name || 'me'}`}
+                                href={`/profile/${(session.user as any)?.username || session.user?.name || 'me'}`}
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',

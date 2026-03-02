@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { ChevronUp, ChevronDown } from 'lucide-react'
 
 interface Props {
@@ -13,8 +13,13 @@ export function VoteButton({ componentId, initialScore, initialUserVote }: Props
     const [score, setScore] = useState(initialScore)
     const [userVote, setUserVote] = useState<1 | -1 | null>(initialUserVote)
     const [animating, setAnimating] = useState<'up' | 'down' | null>(null)
+    const votingRef = useRef(false)
 
     async function vote(value: 1 | -1) {
+        // Prevent concurrent vote requests
+        if (votingRef.current) return
+        votingRef.current = true
+
         const prevScore = score
         const prevVote = userVote
 
@@ -32,15 +37,26 @@ export function VoteButton({ componentId, initialScore, initialUserVote }: Props
         setTimeout(() => setAnimating(null), 300)
 
         try {
-            await fetch(`/api/components/${componentId}/vote`, {
+            const res = await fetch(`/api/components/${componentId}/vote`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ value }),
             })
+            if (res.ok) {
+                const data = await res.json()
+                // Reconcile with real server state
+                setScore(data.voteScore)
+                setUserVote(data.userVote)
+            } else {
+                setScore(prevScore)
+                setUserVote(prevVote)
+            }
         } catch {
             // Revert on error
             setScore(prevScore)
             setUserVote(prevVote)
+        } finally {
+            votingRef.current = false
         }
     }
 
