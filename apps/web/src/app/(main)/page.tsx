@@ -281,6 +281,10 @@ function HomePageContent() {
                                 voteScore={topWeekly[0].voteScore}
                                 author={topWeekly[0].author}
                                 category={topWeekly[0].category}
+                                codeJsx={topWeekly[0].codeJsx}
+                                codeHtml={topWeekly[0].codeHtml}
+                                codeCss={topWeekly[0].codeCss}
+                                codeJs={topWeekly[0].codeJs}
                                 featured
                             />
                         )}
@@ -297,6 +301,10 @@ function HomePageContent() {
                                         voteScore={comp.voteScore}
                                         author={comp.author}
                                         category={comp.category}
+                                        codeJsx={comp.codeJsx}
+                                        codeHtml={comp.codeHtml}
+                                        codeCss={comp.codeCss}
+                                        codeJs={comp.codeJs}
                                     />
                                 ))}
                             </div>

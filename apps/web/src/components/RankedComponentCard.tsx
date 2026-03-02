@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ChevronUp, Crown, Medal, Award } from 'lucide-react'
 import { FireCanvas } from '@/components/FireCanvas'
+import { PreviewButton } from '@/components/PreviewButton'
 
 interface RankedComponentCardProps {
     id: string
@@ -9,6 +10,10 @@ interface RankedComponentCardProps {
     voteScore: number
     category?: string
     featured?: boolean
+    codeJsx?: string | null
+    codeHtml?: string | null
+    codeCss?: string | null
+    codeJs?: string | null
     author?: {
         username?: string | null
         avatarUrl?: string | null
@@ -45,7 +50,7 @@ const RANK_ICONS: Record<number, typeof Crown> = {
     3: Award,
 }
 
-export function RankedComponentCard({ id, rank, title, voteScore, category, featured, author }: RankedComponentCardProps) {
+export function RankedComponentCard({ id, rank, title, voteScore, category, featured, codeJsx, codeHtml, codeCss, codeJs, author }: RankedComponentCardProps) {
     const isTop3 = rank <= 3
     const style = RANK_STYLES[rank]
     const RankIcon = RANK_ICONS[rank]
@@ -116,18 +121,30 @@ export function RankedComponentCard({ id, rank, title, voteScore, category, feat
                         </div>
                     </div>
 
-                    {/* Score */}
-                    <div style={{
-                        display: 'flex', flexDirection: 'column', alignItems: 'center',
-                        gap: '0.0625rem',
-                        padding: '0.5rem 1rem', borderRadius: '10px',
-                        fontSize: '1rem', fontWeight: 700, flexShrink: 0,
-                        background: 'rgba(255, 106, 0, 0.15)',
-                        color: '#ff6a00',
-                        border: '1px solid rgba(255, 106, 0, 0.25)',
-                    }}>
-                        <ChevronUp size={15} style={{ marginBottom: '-2px' }} />
-                        {voteScore}
+                    {/* Preview + Score */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                        <PreviewButton
+                            title={title}
+                            href={`/component/${id}`}
+                            codeJsx={codeJsx}
+                            codeHtml={codeHtml}
+                            codeCss={codeCss}
+                            codeJs={codeJs}
+                            size={15}
+                            light
+                        />
+                        <div style={{
+                            display: 'flex', flexDirection: 'column', alignItems: 'center',
+                            gap: '0.0625rem',
+                            padding: '0.5rem 1rem', borderRadius: '10px',
+                            fontSize: '1rem', fontWeight: 700,
+                            background: 'rgba(255, 106, 0, 0.15)',
+                            color: '#ff6a00',
+                            border: '1px solid rgba(255, 106, 0, 0.25)',
+                        }}>
+                            <ChevronUp size={15} style={{ marginBottom: '-2px' }} />
+                            {voteScore}
+                        </div>
                     </div>
                 </div>
 
@@ -205,18 +222,28 @@ export function RankedComponentCard({ id, rank, title, voteScore, category, feat
                 </div>
             </div>
 
-            {/* Score */}
-            <div style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                gap: '0.0625rem',
-                padding: '0.375rem 0.75rem', borderRadius: '8px',
-                fontSize: '0.9rem', fontWeight: 700, flexShrink: 0,
-                background: voteScore > 0 ? 'rgba(249, 115, 22, 0.1)' : 'var(--color-bg-tertiary)',
-                color: voteScore > 0 ? 'var(--color-upvote)' : 'var(--color-text-secondary)',
-                border: voteScore > 0 ? '1px solid rgba(249, 115, 22, 0.15)' : '1px solid transparent',
-            }}>
-                <ChevronUp size={14} style={{ marginBottom: '-2px' }} />
-                {voteScore}
+            {/* Preview + Score */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
+                <PreviewButton
+                    title={title}
+                    href={`/component/${id}`}
+                    codeJsx={codeJsx}
+                    codeHtml={codeHtml}
+                    codeCss={codeCss}
+                    codeJs={codeJs}
+                />
+                <div style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    gap: '0.0625rem',
+                    padding: '0.375rem 0.75rem', borderRadius: '8px',
+                    fontSize: '0.9rem', fontWeight: 700,
+                    background: voteScore > 0 ? 'rgba(249, 115, 22, 0.1)' : 'var(--color-bg-tertiary)',
+                    color: voteScore > 0 ? 'var(--color-upvote)' : 'var(--color-text-secondary)',
+                    border: voteScore > 0 ? '1px solid rgba(249, 115, 22, 0.15)' : '1px solid transparent',
+                }}>
+                    <ChevronUp size={14} style={{ marginBottom: '-2px' }} />
+                    {voteScore}
+                </div>
             </div>
         </Link>
     )
