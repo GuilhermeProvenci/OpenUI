@@ -14,6 +14,9 @@ export const metadata: Metadata = {
   description:
     'An open platform for sharing UI components. Post React/JSX or HTML+CSS+JS components, vote on others\' work, suggest improvements, and fork components.',
   keywords: ['UI components', 'React', 'JSX', 'CSS', 'frontend', 'open source'],
+  icons: {
+    icon: '/icon.svg',
+  },
   openGraph: {
     title: 'OpenUI — Share & Discover UI Components',
     description:

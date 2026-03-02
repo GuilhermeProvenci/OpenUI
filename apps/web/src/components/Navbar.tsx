@@ -5,7 +5,6 @@ import { useSession, signOut } from 'next-auth/react'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-    Code2,
     Plus,
     Search,
     LogOut,
@@ -59,9 +58,12 @@ export function Navbar() {
                         flexShrink: 0,
                     }}
                 >
-                    <Code2
-                        size={28}
-                        style={{ color: 'var(--color-brand-light)' }}
+                    <img
+                        src="/icon.svg"
+                        alt="OpenUI"
+                        width={28}
+                        height={28}
+                        style={{ borderRadius: '6px' }}
                     />
                     <span
                         className="gradient-text"
