@@ -10,6 +10,9 @@
                 "!.next/cache/**"
             ]
         },
+        "@openui/database#build": {
+            "cache": false
+        },
         "lint": {
             "dependsOn": [
                 "^lint"
