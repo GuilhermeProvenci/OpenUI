@@ -247,22 +247,60 @@ function HomePageContent() {
 
             {/* === TOP 10 THIS WEEK === */}
             {!isSearching && !topLoading && topWeekly.length > 0 && (
-                <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1rem 3rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '1.25rem' }}>
-                        <Trophy size={20} style={{ color: 'var(--color-accent)' }} />
-                        <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Top This Week</h2>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.75rem' }}>
-                        {topWeekly.map((comp, index) => (
+                <section style={{
+                    maxWidth: '1200px', margin: '0 auto', padding: '0 1rem 3rem',
+                }}>
+                    <div style={{
+                        padding: '1.5rem',
+                        borderRadius: '20px',
+                        border: '1px solid var(--color-border)',
+                        background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.03), rgba(99, 102, 241, 0.02))',
+                    }}>
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '1.25rem',
+                        }}>
+                            <div style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                width: '36px', height: '36px', borderRadius: '10px',
+                                background: 'rgba(245, 158, 11, 0.1)',
+                            }}>
+                                <Trophy size={20} style={{ color: 'var(--color-accent)' }} />
+                            </div>
+                            <div>
+                                <h2 style={{ fontSize: '1.125rem', fontWeight: 700 }}>Top This Week</h2>
+                                <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Most voted components in the last 7 days</p>
+                            </div>
+                        </div>
+                        {/* #1 — Featured */}
+                        {topWeekly.length > 0 && (
                             <RankedComponentCard
-                                key={comp.id}
-                                id={comp.id}
-                                rank={index + 1}
-                                title={comp.title}
-                                voteScore={comp.voteScore}
-                                author={comp.author}
+                                key={topWeekly[0].id}
+                                id={topWeekly[0].id}
+                                rank={1}
+                                title={topWeekly[0].title}
+                                voteScore={topWeekly[0].voteScore}
+                                author={topWeekly[0].author}
+                                category={topWeekly[0].category}
+                                featured
                             />
-                        ))}
+                        )}
+
+                        {/* #2–#10 — 3-column grid */}
+                        {topWeekly.length > 1 && (
+                            <div className="top-week-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.625rem' }}>
+                                {topWeekly.slice(1).map((comp, index) => (
+                                    <RankedComponentCard
+                                        key={comp.id}
+                                        id={comp.id}
+                                        rank={index + 2}
+                                        title={comp.title}
+                                        voteScore={comp.voteScore}
+                                        author={comp.author}
+                                        category={comp.category}
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </section>
             )}
@@ -304,6 +342,7 @@ function HomePageContent() {
             <style>{`
                 @media (max-width: 768px) {
                     .feature-grid { grid-template-columns: 1fr !important; }
+                    .top-week-grid { grid-template-columns: 1fr !important; }
                 }
             `}</style>
         </div>
