@@ -17,7 +17,9 @@ export async function GET(req: NextRequest) {
         const search = searchParams.get('q')
         const authorUsername = searchParams.get('author')
         const includeArchived = searchParams.get('includeArchived') === 'true'
-        const limit = 20
+        const period = searchParams.get('period') // 'week' | 'month' | null
+        const limitParam = parseInt(searchParams.get('limit') || '20', 10)
+        const limit = Math.min(Math.max(limitParam, 1), 50)
 
         const session = await getServerSession(authOptions)
 
@@ -50,11 +52,39 @@ export async function GET(req: NextRequest) {
             top: [{ voteScore: 'desc' as const }],
         }[sort] as Prisma.ComponentOrderByWithRelationInput[]
 
+        // Period filter (e.g., "week" for top 10 this week)
+        let periodFilter: Prisma.ComponentWhereInput = {}
+        if (period === 'week') {
+            const oneWeekAgo = new Date()
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+            periodFilter = { createdAt: { gte: oneWeekAgo } }
+        } else if (period === 'month') {
+            const oneMonthAgo = new Date()
+            oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
+            periodFilter = { createdAt: { gte: oneMonthAgo } }
+        }
+
+        // Merge cursor filter with period filter on createdAt
+        let createdAtFilter: Prisma.ComponentWhereInput = {}
+        if (cursor && period) {
+            // Both cursor and period: createdAt must satisfy both gte and lt
+            createdAtFilter = {
+                createdAt: {
+                    ...(periodFilter.createdAt as object),
+                    lt: new Date(cursor),
+                },
+            }
+        } else if (cursor) {
+            createdAtFilter = { createdAt: { lt: new Date(cursor) } }
+        } else if (period) {
+            createdAtFilter = periodFilter
+        }
+
         const where: Prisma.ComponentWhereInput = {
             ...publishedFilter,
             ...authorFilter,
             ...(category ? { category } : {}),
-            ...(cursor ? { createdAt: { lt: new Date(cursor) } } : {}),
+            ...createdAtFilter,
             ...(search
                 ? {
                     OR: [

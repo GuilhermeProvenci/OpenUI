@@ -1,12 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, use } from 'react'
+import { useState, useEffect, useCallback, use } from 'react'
 import { ComponentCard } from '@/components/ComponentCard'
-import { CategoryBadge } from '@/components/CategoryBadge'
-import { Flame, Clock, TrendingUp } from 'lucide-react'
+import { Flame, Clock, TrendingUp, Loader2 } from 'lucide-react'
 import { categoryFromSlug, CATEGORIES } from '@openui/ui'
 import type { ComponentWithAuthor, SortOption } from '@/types'
-import { Category } from '@openui/database'
 
 const SORT_OPTIONS: { value: SortOption; label: string; icon: React.ReactNode }[] = [
     { value: 'hot', label: 'Hot', icon: <Flame size={15} /> },
@@ -29,11 +27,12 @@ export default function CategoryPage({
     const [cursor, setCursor] = useState<string | null>(null)
     const [hasMore, setHasMore] = useState(true)
     const [loading, setLoading] = useState(true)
-    const observerRef = useRef<HTMLDivElement>(null)
+    const [loadingMore, setLoadingMore] = useState(false)
 
     const fetchComponents = useCallback(
         async (reset = false) => {
-            setLoading(true)
+            if (reset) setLoading(true)
+            else setLoadingMore(true)
             try {
                 const params = new URLSearchParams()
                 params.set('sort', sort)
@@ -56,6 +55,7 @@ export default function CategoryPage({
                 console.error('Failed to fetch components', error)
             } finally {
                 setLoading(false)
+                setLoadingMore(false)
             }
         },
         [sort, cursor, category]
@@ -68,21 +68,6 @@ export default function CategoryPage({
         fetchComponents(true)
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sort, category])
-
-    useEffect(() => {
-        if (!hasMore || loading) return
-        const observer = new IntersectionObserver(
-            (entries) => {
-                if (entries[0].isIntersecting && hasMore && !loading) {
-                    fetchComponents(false)
-                }
-            },
-            { rootMargin: '200px' }
-        )
-        if (observerRef.current) observer.observe(observerRef.current)
-        return () => observer.disconnect()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [hasMore, loading])
 
     return (
         <div
@@ -213,7 +198,62 @@ export default function CategoryPage({
                 </div>
             )}
 
-            <div ref={observerRef} style={{ height: '1px' }} />
+            {/* Load More */}
+            {!loading && components.length > 0 && (
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    marginTop: '2rem',
+                }}>
+                    <span style={{
+                        fontSize: '0.8125rem',
+                        color: 'var(--color-text-muted)',
+                    }}>
+                        Showing {components.length} components
+                    </span>
+                    {hasMore && (
+                        <button
+                            onClick={() => fetchComponents(false)}
+                            disabled={loadingMore}
+                            className="transition-base"
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '0.75rem 2rem',
+                                borderRadius: '12px',
+                                border: '1px solid var(--color-border)',
+                                background: 'var(--color-bg-card)',
+                                color: 'var(--color-text-primary)',
+                                fontSize: '0.875rem',
+                                fontWeight: 600,
+                                cursor: loadingMore ? 'not-allowed' : 'pointer',
+                            }}
+                        >
+                            {loadingMore ? (
+                                <>
+                                    <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                                    Loading...
+                                </>
+                            ) : (
+                                'Load more'
+                            )}
+                        </button>
+                    )}
+                    {!hasMore && (
+                        <span style={{
+                            fontSize: '0.8125rem',
+                            color: 'var(--color-text-muted)',
+                        }}>
+                            You&apos;ve reached the end
+                        </span>
+                    )}
+                </div>
+            )}
+
+            <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
         </div>
     )
 }
