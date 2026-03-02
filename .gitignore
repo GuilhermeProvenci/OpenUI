@@ -52,3 +52,6 @@ next-env.d.ts
 # IDEs
 .vscode/
 .idea/
+
+# Claude Code
+.claude/

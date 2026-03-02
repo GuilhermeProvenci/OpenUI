@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { ChevronUp, Crown, Medal, Award } from 'lucide-react'
+import { FireCanvas } from '@/components/FireCanvas'
 
 interface RankedComponentCardProps {
     id: string
@@ -55,73 +56,83 @@ export function RankedComponentCard({ id, rank, title, voteScore, category, feat
                 href={`/component/${id}`}
                 className="card-hover"
                 style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '1.25rem',
-                    padding: '1.25rem 1.5rem',
+                    display: 'block',
                     borderRadius: '16px',
-                    border: '1px solid rgba(251, 191, 36, 0.35)',
-                    background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(245, 158, 11, 0.04))',
-                    boxShadow: '0 0 30px rgba(251, 191, 36, 0.12)',
+                    border: '1px solid rgba(255, 120, 20, 0.25)',
+                    background: 'linear-gradient(160deg, #1a1a2e 0%, #16213e 60%, #0f0f1a 100%)',
+                    boxShadow: '0 0 40px rgba(255, 80, 0, 0.12), 0 20px 60px rgba(0,0,0,0.4)',
                     textDecoration: 'none',
                     position: 'relative',
                     overflow: 'hidden',
                     marginBottom: '0.625rem',
                 }}
             >
-                {/* Gold rank badge */}
-                <span style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: '44px', height: '44px', borderRadius: '12px',
-                    background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
-                    color: '#fff', flexShrink: 0,
-                    boxShadow: '0 4px 12px rgba(251, 191, 36, 0.3)',
-                }}>
-                    <Crown size={22} />
-                </span>
-
-                {/* Content */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
-                        fontSize: '1.05rem', fontWeight: 700,
-                        color: 'var(--color-text-primary)',
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        marginBottom: '0.3rem',
-                    }}>
-                        {title}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                            {author?.avatarUrl && (
-                                <img src={author.avatarUrl} alt="" style={{
-                                    width: '18px', height: '18px', borderRadius: '50%',
-                                    border: '1px solid var(--color-border)',
-                                }} />
-                            )}
-                            {author?.username}
-                        </span>
-                        {category && (
-                            <>
-                                <span style={{ color: 'var(--color-border-light)' }}>·</span>
-                                <span style={{ textTransform: 'capitalize' }}>{category.toLowerCase()}</span>
-                            </>
-                        )}
-                    </div>
-                </div>
-
-                {/* Score */}
                 <div style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    gap: '0.0625rem',
-                    padding: '0.5rem 1rem', borderRadius: '10px',
-                    fontSize: '1rem', fontWeight: 700, flexShrink: 0,
-                    background: 'rgba(251, 191, 36, 0.12)',
-                    color: '#fbbf24',
-                    border: '1px solid rgba(251, 191, 36, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1.25rem',
+                    padding: '1.25rem 1.5rem',
+                    position: 'relative',
+                    zIndex: 2,
                 }}>
-                    <ChevronUp size={15} style={{ marginBottom: '-2px' }} />
-                    {voteScore}
+                    {/* Gold rank badge */}
+                    <span style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        width: '44px', height: '44px', borderRadius: '12px',
+                        background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
+                        color: '#fff', flexShrink: 0,
+                        boxShadow: '0 4px 12px rgba(251, 191, 36, 0.3)',
+                    }}>
+                        <Crown size={22} />
+                    </span>
+
+                    {/* Content */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                            fontSize: '1.05rem', fontWeight: 700,
+                            color: '#fff',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            marginBottom: '0.3rem',
+                            textShadow: '0 0 20px rgba(255, 100, 0, 0.3)',
+                        }}>
+                            {title}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                                {author?.avatarUrl && (
+                                    <img src={author.avatarUrl} alt="" style={{
+                                        width: '18px', height: '18px', borderRadius: '50%',
+                                        border: '1px solid rgba(255,255,255,0.15)',
+                                    }} />
+                                )}
+                                {author?.username}
+                            </span>
+                            {category && (
+                                <>
+                                    <span style={{ color: 'rgba(255,255,255,0.2)' }}>·</span>
+                                    <span style={{ textTransform: 'capitalize' }}>{category.toLowerCase()}</span>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Score */}
+                    <div style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center',
+                        gap: '0.0625rem',
+                        padding: '0.5rem 1rem', borderRadius: '10px',
+                        fontSize: '1rem', fontWeight: 700, flexShrink: 0,
+                        background: 'rgba(255, 106, 0, 0.15)',
+                        color: '#ff6a00',
+                        border: '1px solid rgba(255, 106, 0, 0.25)',
+                    }}>
+                        <ChevronUp size={15} style={{ marginBottom: '-2px' }} />
+                        {voteScore}
+                    </div>
                 </div>
+
+                {/* Fire strip */}
+                <FireCanvas height={55} />
             </Link>
         )
     }
