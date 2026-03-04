@@ -1,12 +1,33 @@
-export type SandboxMode = 'jsx' | 'html'
+export type SandboxMode = "jsx" | "html";
 
 interface SandboxOptions {
-  mode: SandboxMode
-  codeJsx?: string | null
-  codeHtml?: string | null
-  codeCss?: string | null
-  codeJs?: string | null
-  theme?: 'light' | 'dark'
+  mode?: SandboxMode;
+  codeJsx?: string | null;
+  codeHtml?: string | null;
+  codeCss?: string | null;
+  codeJs?: string | null;
+  theme?: "light" | "dark";
+}
+
+type ResolvedMode = "jsx" | "html";
+
+function resolveMode(opts: SandboxOptions): ResolvedMode {
+  if (opts.mode) return opts.mode;
+
+  const hasHtmlContent = opts.codeHtml && opts.codeCss;
+  const hasJsxContent = opts.codeJsx;
+
+  if (hasHtmlContent && !hasJsxContent) {
+    console.log("[Sandbox] Mode: html (hasHtmlContent && !hasJsxContent)");
+    return "html";
+  }
+  if (hasJsxContent && !hasHtmlContent) {
+    console.log("[Sandbox] Mode: jsx (hasJsxContent && !hasHtmlContent)");
+    return "jsx";
+  }
+
+  console.log("[Sandbox] Mode: html (fallback)");
+  return "html";
 }
 
 /**
@@ -15,8 +36,10 @@ interface SandboxOptions {
  * In HTML mode, renders raw HTML + CSS + JS.
  */
 export function buildSandboxHtml(opts: SandboxOptions): string {
-  const bg = opts.theme === 'dark' ? '#0f172a' : '#ffffff'
-  const textColor = opts.theme === 'dark' ? '#e2e8f0' : '#1e293b'
+  const mode = resolveMode(opts);
+
+  const bg = opts.theme === "dark" ? "#0f172a" : "#ffffff";
+  const textColor = opts.theme === "dark" ? "#e2e8f0" : "#1e293b";
 
   const baseStyles = `
     * { box-sizing: border-box; margin: 0; padding: 0; scrollbar-width: thin; scrollbar-color: #353548 #111119; }
@@ -34,7 +57,7 @@ export function buildSandboxHtml(opts: SandboxOptions): string {
       padding: 16px;
       font-family: system-ui, -apple-system, sans-serif;
     }
-  `
+  `;
 
   const navigationPreventionScript = `
     <script>
@@ -56,9 +79,9 @@ export function buildSandboxHtml(opts: SandboxOptions): string {
         console.log('Form submission prevented in sandbox');
       }, true);
     </script>
-  `
+  `;
 
-  if (opts.mode === 'jsx') {
+  if (mode === "jsx") {
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -66,20 +89,20 @@ export function buildSandboxHtml(opts: SandboxOptions): string {
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <style>${baseStyles}${opts.codeCss ?? ''}</style>
+  <style>${baseStyles}${opts.codeCss ?? ""}</style>
   ${navigationPreventionScript}
 </head>
 <body>
   <div id="root"></div>
   <script type="text/babel">
-    ${opts.codeJsx ?? ''}
+    ${opts.codeJsx ?? ""}
     const rootElement = document.getElementById('root')
     if (typeof App !== 'undefined') {
       ReactDOM.createRoot(rootElement).render(React.createElement(App))
     }
   </script>
 </body>
-</html>`
+</html>`;
   }
 
   // HTML mode
@@ -87,12 +110,12 @@ export function buildSandboxHtml(opts: SandboxOptions): string {
 <html>
 <head>
   <meta charset="UTF-8">
-  <style>${baseStyles}${opts.codeCss ?? ''}</style>
+  <style>${baseStyles}${opts.codeCss ?? ""}</style>
   ${navigationPreventionScript}
 </head>
 <body>
-  ${opts.codeHtml ?? ''}
-  <script>${opts.codeJs ?? ''}</script>
+  ${opts.codeHtml ?? ""}
+  <script>${opts.codeJs ?? ""}</script>
 </body>
-</html>`
+</html>`;
 }

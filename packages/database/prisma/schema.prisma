@@ -59,6 +59,8 @@ model User {
   components    Component[]
   votes         Vote[]
   suggestions   Suggestion[]
+  views         ComponentView[]
+  saved         ComponentSave[]
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 }
@@ -88,10 +90,16 @@ model Component {
   votes       Vote[]
   suggestions Suggestion[]
   versions    ComponentVersion[]
+  views       ComponentView[]
+  saves       ComponentSave[]
 
   // Denormalized score for fast sorting
   voteScore   Int          @default(0)
   currentVersion Int       @default(1)
+
+  // View counts
+  viewCount       Int      @default(0)
+  uniqueViewCount Int      @default(0)
 
   published   Boolean      @default(true)
   createdAt   DateTime     @default(now())
@@ -101,6 +109,8 @@ model Component {
   @@index([voteScore])
   @@index([createdAt])
   @@index([authorId])
+  @@index([viewCount])
+  @@index([uniqueViewCount])
 }
 
 model Vote {
@@ -113,6 +123,31 @@ model Vote {
   createdAt   DateTime  @default(now())
 
   @@unique([userId, componentId])
+}
+
+model ComponentView {
+  id          String    @id @default(cuid())
+  userId      String?
+  componentId String
+  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  component   Component @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@index([componentId])
+  @@index([userId, componentId])
+}
+
+model ComponentSave {
+  id          String    @id @default(cuid())
+  userId      String
+  componentId String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  component   Component @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, componentId])
+  @@index([userId])
+  @@index([componentId])
 }
 
 model Suggestion {

@@ -23,6 +23,7 @@ import {
     ChevronRight,
     History,
     Archive,
+    Bookmark,
 } from 'lucide-react'
 
 type CodeTab = 'preview' | 'jsx' | 'html' | 'css' | 'js'
@@ -47,6 +48,8 @@ export default function ComponentDetailPage({
     const [loadingVersion, setLoadingVersion] = useState(false)
     const [archiving, setArchiving] = useState(false)
     const [showArchiveConfirm, setShowArchiveConfirm] = useState(false)
+    const [saved, setSaved] = useState(false)
+    const [saving, setSaving] = useState(false)
 
     useEffect(() => {
         async function load() {
@@ -59,6 +62,22 @@ export default function ComponentDetailPage({
                 if (!res.ok) throw new Error('Not found')
                 const data = await res.json()
                 setComponent(data)
+
+                fetch(`/api/components/${id}/view`, { method: 'POST' })
+                    .then(res => res.ok ? res.json() : null)
+                    .then(viewData => {
+                        if (viewData) {
+                            setComponent((c: any) => c ? { ...c, viewCount: viewData.viewCount } : c)
+                        }
+                    })
+                    .catch(() => {})
+
+                fetch(`/api/components/${id}/save`)
+                    .then(res => res.ok ? res.json() : null)
+                    .then(data => {
+                        if (data) setSaved(data.saved)
+                    })
+                    .catch(() => {})
             } catch {
                 router.push('/')
             } finally {
@@ -132,6 +151,23 @@ export default function ComponentDetailPage({
             alert('Failed to fork component')
         } finally {
             setForking(false)
+        }
+    }
+
+    async function handleSave() {
+        if (!session) {
+            router.push('/login')
+            return
+        }
+        setSaving(true)
+        try {
+            const res = await fetch(`/api/components/${id}/save`, { method: 'POST' })
+            const data = await res.json()
+            setSaved(data.saved)
+        } catch {
+            alert('Failed to save component')
+        } finally {
+            setSaving(false)
         }
     }
 
@@ -256,6 +292,10 @@ export default function ComponentDetailPage({
                         </div>
                         <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
                             {formatDate(component.createdAt)}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <Eye size={12} />
+                            {component.viewCount || 0} views
                         </span>
                         <CategoryBadge category={component.category} size="md" />
                     </div>
@@ -442,11 +482,33 @@ export default function ComponentDetailPage({
                             background: 'transparent',
                             color: 'var(--color-text-secondary)',
                             fontSize: '0.8125rem',
-                            cursor: 'pointer',
+                            cursor: forking ? 'not-allowed' : 'pointer',
+                            opacity: forking ? 0.6 : 1,
                         }}
                     >
                         <GitFork size={14} />
                         Fork ({component._count.forks})
+                    </button>
+                    <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="transition-base"
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.375rem',
+                            padding: '0.5rem 0.875rem',
+                            borderRadius: '8px',
+                            border: '1px solid var(--color-border)',
+                            background: saved ? 'var(--color-brand)' : 'transparent',
+                            color: saved ? 'white' : 'var(--color-text-secondary)',
+                            fontSize: '0.8125rem',
+                            cursor: saving ? 'not-allowed' : 'pointer',
+                            opacity: saving ? 0.6 : 1,
+                        }}
+                    >
+                        <Bookmark size={14} fill={saved ? 'currentColor' : 'none'} />
+                        {saved ? 'Saved' : 'Save'}
                     </button>
                     <a
                         href={`/component/${id}/suggest`}
