@@ -87,8 +87,8 @@ openui/
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/openui.git
-cd openui
+git clone https://github.com/GuilhermeProvenci/OpenUI.git
+cd OpenUI
 ```
 
 ### 2. Install dependencies
@@ -195,7 +195,7 @@ You need a PostgreSQL database. Recommended free options:
 ### 1. Push to GitHub
 
 ```bash
-git remote add origin https://github.com/YOUR_USERNAME/openui.git
+git remote add origin https://github.com/GuilhermeProvenci/OpenUI.git
 git push -u origin main
 ```
 
