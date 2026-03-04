@@ -56,3 +56,4 @@ packages/database/src/generated/
 
 # Claude Code
 .claude/
+CLAUDE.md
