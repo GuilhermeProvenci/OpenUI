@@ -5,7 +5,7 @@ import { ComponentPreview } from "./ComponentPreview";
 import { VoteButton } from "./VoteButton";
 import { CategoryBadge } from "./CategoryBadge";
 import { formatDate } from "@openui/ui";
-import { GitFork, MessageSquare, Eye } from "lucide-react";
+import { GitFork, MessageSquare, Eye, Bookmark } from "lucide-react";
 import type { ComponentWithAuthor } from "@/types";
 
 interface Props {
@@ -82,25 +82,31 @@ export function ComponentCard({ component, userVote = null }: Props) {
               marginBottom: "0.5rem",
             }}
           >
-            {component.author.avatarUrl && (
-              <img
-                src={component.author.avatarUrl}
-                alt={component.author.username || ""}
-                style={{
-                  width: "18px",
-                  height: "18px",
-                  borderRadius: "50%",
-                }}
-              />
-            )}
-            <span
+            <Link
+              href={`/profile/${component.author.username}`}
+              onClick={(e) => e.stopPropagation()}
               style={{
-                fontSize: "0.75rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.375rem",
+                textDecoration: "none",
                 color: "var(--color-text-secondary)",
+                fontSize: "0.75rem",
               }}
             >
+              {component.author.avatarUrl && (
+                <img
+                  src={component.author.avatarUrl}
+                  alt={component.author.username || ""}
+                  style={{
+                    width: "18px",
+                    height: "18px",
+                    borderRadius: "50%",
+                  }}
+                />
+              )}
               {component.author.username}
-            </span>
+            </Link>
             <span
               style={{
                 fontSize: "0.6875rem",
@@ -187,6 +193,16 @@ export function ComponentCard({ component, userVote = null }: Props) {
             >
               <Eye size={13} />
               {component.viewCount || 0}
+            </span>
+            <span
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.25rem",
+              }}
+            >
+              <Bookmark size={13} />
+              {component._count.saves || 0}
             </span>
           </div>
 

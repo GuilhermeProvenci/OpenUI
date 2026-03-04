@@ -48,6 +48,7 @@ next-env.d.ts
 
 # prisma
 /src/generated/prisma
+packages/database/src/generated/
 
 # IDEs
 .vscode/

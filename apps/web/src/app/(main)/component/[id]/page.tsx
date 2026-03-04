@@ -353,7 +353,7 @@ export default function ComponentDetailPage({
                             >
                                 {component.forkedFrom.title}
                             </a>
-                            <span> by {component.forkedFrom.author.username}</span>
+                            <span> by <a href={`/profile/${component.forkedFrom.author.username}`} style={{ color: 'var(--color-brand-light)', textDecoration: 'none' }}>{component.forkedFrom.author.username}</a></span>
                         </div>
                     )}
                 </div>
@@ -810,14 +810,19 @@ export default function ComponentDetailPage({
                                         color: 'var(--color-text-muted)',
                                     }}
                                 >
-                                    {sug.author.avatarUrl && (
-                                        <img
-                                            src={sug.author.avatarUrl}
-                                            alt=""
-                                            style={{ width: '16px', height: '16px', borderRadius: '50%' }}
-                                        />
-                                    )}
-                                    <span>{sug.author.username}</span>
+                                    <a
+                                        href={`/profile/${sug.author.username}`}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', textDecoration: 'none', color: 'inherit' }}
+                                    >
+                                        {sug.author.avatarUrl && (
+                                            <img
+                                                src={sug.author.avatarUrl}
+                                                alt=""
+                                                style={{ width: '16px', height: '16px', borderRadius: '50%' }}
+                                            />
+                                        )}
+                                        <span>{sug.author.username}</span>
+                                    </a>
                                     <span>· {formatDate(sug.createdAt)}</span>
                                     <button
                                         onClick={() => toggleDiff(sug.id)}
@@ -1028,7 +1033,10 @@ export default function ComponentDetailPage({
                                             color: 'var(--color-text-muted)',
                                         }}
                                     >
-                                        by {fork.author.username}
+                                        by <span
+                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `/profile/${fork.author.username}` }}
+                                            style={{ color: 'var(--color-brand-light)', cursor: 'pointer' }}
+                                        >{fork.author.username}</span>
                                     </div>
                                 </div>
                                 <ExternalLink

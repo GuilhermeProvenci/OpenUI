@@ -18,10 +18,12 @@ import {
     Eye,
     Bookmark,
 } from 'lucide-react'
-import { formatDate } from '@openui/ui'
+import { formatDate, CATEGORIES } from '@openui/ui'
+import { CategoryBadge } from '@/components/CategoryBadge'
 import type { ComponentWithAuthor } from '@/types'
 
 type Tab = 'components' | 'forks' | 'archived' | 'saved'
+type ProfileSort = 'new' | 'top' | 'views' | 'saves'
 
 export default function ProfilePage({
     params,
@@ -40,6 +42,8 @@ export default function ProfilePage({
     const [actionLoading, setActionLoading] = useState<string | null>(null)
     const [totalViews, setTotalViews] = useState(0)
     const [uniqueViews, setUniqueViews] = useState(0)
+    const [profileSort, setProfileSort] = useState<ProfileSort>('new')
+    const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
 
     const isOwnProfile = session?.user?.id && profileUser?.id === session.user.id
 
@@ -61,7 +65,7 @@ export default function ProfilePage({
                     setUniqueViews(data.profileUser.uniqueViews || 0)
                 }
 
-                if (session?.user?.id) {
+                if (session?.user?.username === username) {
                     const savedRes = await fetch(`/api/users/me/saved`)
                     if (savedRes.ok) {
                         const savedData = await savedRes.json()
@@ -114,12 +118,36 @@ export default function ProfilePage({
     const archivedComponents = components.filter((c) => c.published === false)
     const totalScore = publishedComponents.reduce((sum, c) => sum + c.voteScore, 0)
 
-    const displayComponents = {
+    // Get base list for current tab
+    const baseComponents = {
         components: userOriginals,
         forks: userForks,
         archived: archivedComponents,
         saved: savedComponents,
     }[tab]
+
+    // Extract unique categories from current tab's components
+    const availableCategories = [...new Set(baseComponents.map((c) => c.category))]
+
+    // Apply category filter
+    const filteredComponents = categoryFilter
+        ? baseComponents.filter((c) => c.category === categoryFilter)
+        : baseComponents
+
+    // Apply sorting
+    const displayComponents = [...filteredComponents].sort((a, b) => {
+        switch (profileSort) {
+            case 'top':
+                return b.voteScore - a.voteScore
+            case 'views':
+                return (b.viewCount || 0) - (a.viewCount || 0)
+            case 'saves':
+                return (b._count?.saves || 0) - (a._count?.saves || 0)
+            case 'new':
+            default:
+                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        }
+    })
 
     const tabs: { key: Tab; label: string; count: number }[] = [
         { key: 'components', label: 'Components', count: userOriginals.length },
@@ -155,7 +183,9 @@ export default function ProfilePage({
                     <div style={{ display: 'flex', gap: '1.25rem', color: 'var(--color-text-secondary)', fontSize: '0.8125rem', flexWrap: 'wrap' }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><Code2 size={14} />{userOriginals.length} components</span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><GitFork size={14} />{userForks.length} forks</span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><Eye size={14} />{uniqueViews} unique views</span>
+                        {isOwnProfile && (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><Eye size={14} />{uniqueViews} unique views</span>
+                        )}
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><Eye size={14} />{totalViews} total views</span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><Star size={14} />{totalScore} score</span>
                         {profileUser?.createdAt && (
@@ -186,6 +216,88 @@ export default function ProfilePage({
                     </button>
                 ))}
             </div>
+
+            {/* Sort Pills */}
+            <div style={{ display: 'flex', gap: '0.375rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+                {([
+                    { key: 'new', label: 'Recent' },
+                    { key: 'top', label: 'Most Liked' },
+                    { key: 'views', label: 'Most Viewed' },
+                    { key: 'saves', label: 'Most Saved' },
+                ] as const).map((s) => (
+                    <button
+                        key={s.key}
+                        onClick={() => setProfileSort(s.key)}
+                        className="transition-base"
+                        style={{
+                            padding: '0.35rem 0.75rem',
+                            borderRadius: '8px',
+                            border: '1px solid',
+                            borderColor: profileSort === s.key ? 'var(--color-brand)' : 'var(--color-border)',
+                            background: profileSort === s.key ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                            color: profileSort === s.key ? 'var(--color-brand-light)' : 'var(--color-text-tertiary)',
+                            fontSize: '0.75rem',
+                            fontWeight: profileSort === s.key ? 600 : 400,
+                            cursor: 'pointer',
+                        }}
+                    >
+                        {s.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Category Filter */}
+            {availableCategories.length > 1 && (
+                <div style={{ display: 'flex', gap: '0.375rem', marginBottom: '1.25rem', overflowX: 'auto', paddingBottom: '0.25rem', flexWrap: 'wrap' }}>
+                    <button
+                        onClick={() => setCategoryFilter(null)}
+                        className="transition-base"
+                        style={{
+                            padding: '0.25rem 0.625rem',
+                            borderRadius: '6px',
+                            border: '1px solid',
+                            borderColor: !categoryFilter ? 'var(--color-brand)' : 'var(--color-border)',
+                            background: !categoryFilter ? 'rgba(99, 102, 241, 0.1)' : 'var(--color-bg-tertiary)',
+                            color: !categoryFilter ? 'var(--color-brand-light)' : 'var(--color-text-secondary)',
+                            fontSize: '0.6875rem',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
+                        All
+                    </button>
+                    {availableCategories.map((cat) => {
+                        const catInfo = CATEGORIES.find((c) => c.value === cat)
+                        const isSelected = categoryFilter === cat
+                        return (
+                            <button
+                                key={cat}
+                                onClick={() => setCategoryFilter(isSelected ? null : cat)}
+                                className="transition-base"
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.25rem',
+                                    padding: '0.25rem 0.625rem',
+                                    borderRadius: '6px',
+                                    border: '1px solid',
+                                    borderColor: isSelected ? 'var(--color-brand)' : 'var(--color-border)',
+                                    background: isSelected ? 'rgba(99, 102, 241, 0.1)' : 'var(--color-bg-tertiary)',
+                                    color: isSelected ? 'var(--color-brand-light)' : 'var(--color-text-secondary)',
+                                    fontSize: '0.6875rem',
+                                    fontWeight: 500,
+                                    cursor: 'pointer',
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
+                                <span>{catInfo?.emoji || '🧩'}</span>
+                                <span>{catInfo?.label || cat}</span>
+                            </button>
+                        )
+                    })}
+                </div>
+            )}
 
             {/* Grid */}
             {loading ? (

@@ -59,6 +59,7 @@ export async function GET(req: NextRequest) {
         (sum: number, c: any) => sum + (c.uniqueViewCount || 0),
         0,
       );
+      const isOwner = session?.user?.id === profileUser.id;
       profileUser = {
         id: profileUser.id,
         username: profileUser.username,
@@ -66,7 +67,7 @@ export async function GET(req: NextRequest) {
         bio: profileUser.bio,
         createdAt: profileUser.createdAt,
         totalViews,
-        uniqueViews,
+        ...(isOwner ? { uniqueViews } : {}),
       };
       authorFilter = { authorId: profileUser.id };
     }
@@ -135,7 +136,7 @@ export async function GET(req: NextRequest) {
       take: limit + 1,
       include: {
         author: { select: { username: true, avatarUrl: true } },
-        _count: { select: { votes: true, suggestions: true, forks: true } },
+        _count: { select: { votes: true, suggestions: true, forks: true, saves: true } },
       },
     });
 

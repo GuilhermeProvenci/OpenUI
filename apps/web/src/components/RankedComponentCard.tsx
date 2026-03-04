@@ -1,3 +1,5 @@
+'use client'
+
 import Link from 'next/link'
 import { ChevronUp, Crown, Medal, Award } from 'lucide-react'
 import { FireCanvas } from '@/components/FireCanvas'
@@ -103,7 +105,10 @@ export function RankedComponentCard({ id, rank, title, voteScore, category, feat
                             {title}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)' }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                            <span
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (author?.username) window.location.href = `/profile/${author.username}` }}
+                                style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: author?.username ? 'pointer' : 'default' }}
+                            >
                                 {author?.avatarUrl && (
                                     <img src={author.avatarUrl} alt="" style={{
                                         width: '18px', height: '18px', borderRadius: '50%',
@@ -204,7 +209,10 @@ export function RankedComponentCard({ id, rank, title, voteScore, category, feat
                     {title}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                    <span
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (author?.username) window.location.href = `/profile/${author.username}` }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: author?.username ? 'pointer' : 'default' }}
+                    >
                         {author?.avatarUrl && (
                             <img src={author.avatarUrl} alt="" style={{
                                 width: '16px', height: '16px', borderRadius: '50%',

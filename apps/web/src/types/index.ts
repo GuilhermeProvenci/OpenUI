@@ -21,6 +21,7 @@ export type ComponentWithAuthor = Component & {
     votes: number
     suggestions: number
     forks: number
+    saves: number
   }
 }
 
@@ -40,6 +41,7 @@ export type ComponentWithDetails = Component & {
     votes: number
     suggestions: number
     forks: number
+    saves: number
   }
 }
 

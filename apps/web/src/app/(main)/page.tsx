@@ -16,7 +16,9 @@ import {
     Trophy,
     ChevronRight,
     ArrowDown,
+    User,
 } from 'lucide-react'
+import { Avatar } from '@/components/Avatar'
 import { FeatureCard } from '@/components/FeatureCard'
 import { RankedComponentCard } from '@/components/RankedComponentCard'
 import type { ComponentWithAuthor, SortOption } from '@/types'
@@ -41,6 +43,9 @@ function HomePageContent() {
     const searchQuery = searchParams.get('q') || ''
     const feedRef = useRef<HTMLDivElement>(null)
 
+    // Search users state
+    const [searchUsers, setSearchUsers] = useState<{ id: string; username: string; avatarUrl: string | null; bio: string | null; _count: { components: number } }[]>([])
+
     // Top 10 state
     const [topWeekly, setTopWeekly] = useState<ComponentWithAuthor[]>([])
     const [topLoading, setTopLoading] = useState(true)
@@ -53,6 +58,24 @@ function HomePageContent() {
     const [hasMore, setHasMore] = useState(true)
     const [loading, setLoading] = useState(true)
     const [loadingMore, setLoadingMore] = useState(false)
+
+    // Fetch users when searching
+    useEffect(() => {
+        if (!searchQuery) {
+            setSearchUsers([])
+            return
+        }
+        async function fetchUsers() {
+            try {
+                const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`)
+                const data = await res.json()
+                setSearchUsers(data.users ?? [])
+            } catch {
+                // ignore
+            }
+        }
+        fetchUsers()
+    }, [searchQuery])
 
     // Fetch top 10 this week
     useEffect(() => {
@@ -319,6 +342,50 @@ function HomePageContent() {
                     <div style={{ marginBottom: '1.5rem', marginTop: '2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <span style={{ color: 'var(--color-text-secondary)' }}>Results for</span>
                         <span style={{ fontWeight: 600, color: 'var(--color-brand-light)' }}>&quot;{searchQuery}&quot;</span>
+                    </div>
+                )}
+
+                {/* User results when searching */}
+                {isSearching && searchUsers.length > 0 && (
+                    <div style={{ marginBottom: '1.5rem' }}>
+                        <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                            <User size={14} /> Users
+                        </h3>
+                        <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+                            {searchUsers.map((user) => (
+                                <Link
+                                    key={user.id}
+                                    href={`/profile/${user.username}`}
+                                    className="card-hover"
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.75rem',
+                                        padding: '0.75rem 1rem',
+                                        borderRadius: '12px',
+                                        background: 'var(--color-bg-card)',
+                                        border: '1px solid var(--color-border)',
+                                        textDecoration: 'none',
+                                        color: 'var(--color-text-primary)',
+                                        minWidth: '220px',
+                                        flexShrink: 0,
+                                    }}
+                                >
+                                    <Avatar src={user.avatarUrl} alt={user.username} size={40} fallback={user.username} />
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{user.username}</div>
+                                        {user.bio && (
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '150px' }}>
+                                                {user.bio}
+                                            </div>
+                                        )}
+                                        <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-tertiary)', marginTop: '0.125rem' }}>
+                                            {user._count.components} component{user._count.components !== 1 ? 's' : ''}
+                                        </div>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
                     </div>
                 )}
 

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
     Plus,
@@ -11,9 +11,16 @@ import {
     Menu,
     X,
     ChevronDown,
+    Code2,
+    User,
 } from 'lucide-react'
 import { CATEGORIES } from '@openui/ui'
 import { Avatar } from '@/components/Avatar'
+
+interface SearchResult {
+    components: { id: string; title: string; category: string; author: { username: string; avatarUrl: string | null } }[]
+    users: { id: string; username: string; avatarUrl: string | null; bio: string | null; _count: { components: number } }[]
+}
 
 export function Navbar() {
     const { data: session } = useSession()
@@ -21,13 +28,57 @@ export function Navbar() {
     const [searchQuery, setSearchQuery] = useState('')
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const [categoriesOpen, setCategoriesOpen] = useState(false)
+    const [searchResults, setSearchResults] = useState<SearchResult | null>(null)
+    const [showDropdown, setShowDropdown] = useState(false)
+    const searchRef = useRef<HTMLDivElement>(null)
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    const fetchSearch = useCallback(async (q: string) => {
+        if (!q.trim()) {
+            setSearchResults(null)
+            setShowDropdown(false)
+            return
+        }
+        try {
+            const res = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}`)
+            const data = await res.json()
+            setSearchResults(data)
+            setShowDropdown(true)
+        } catch {
+            // ignore
+        }
+    }, [])
+
+    function handleSearchInput(value: string) {
+        setSearchQuery(value)
+        if (debounceRef.current) clearTimeout(debounceRef.current)
+        debounceRef.current = setTimeout(() => fetchSearch(value), 300)
+    }
+
+    // Close dropdown on click outside
+    useEffect(() => {
+        function handleClick(e: MouseEvent) {
+            if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+                setShowDropdown(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClick)
+        return () => document.removeEventListener('mousedown', handleClick)
+    }, [])
 
     function handleSearch(e: React.FormEvent) {
         e.preventDefault()
         if (searchQuery.trim()) {
             router.push(`/?q=${encodeURIComponent(searchQuery.trim())}`)
             setSearchQuery('')
+            setShowDropdown(false)
         }
+    }
+
+    function navigateAndClose(href: string) {
+        router.push(href)
+        setSearchQuery('')
+        setShowDropdown(false)
     }
 
     return (
@@ -173,43 +224,149 @@ export function Navbar() {
                 </div>
 
                 {/* Search Bar */}
-                <form
-                    onSubmit={handleSearch}
-                    className="hide-mobile"
-                    style={{
-                        flex: 1,
-                        maxWidth: '400px',
-                    }}
-                >
-                    <div
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            background: 'var(--color-bg-tertiary)',
-                            borderRadius: '10px',
-                            border: '1px solid var(--color-border)',
-                            padding: '0 0.75rem',
-                            transition: 'border-color 0.2s',
-                        }}
-                    >
-                        <Search size={16} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search components..."
+                <div ref={searchRef} className="hide-mobile" style={{ flex: 1, maxWidth: '400px', position: 'relative' }}>
+                    <form onSubmit={handleSearch}>
+                        <div
                             style={{
-                                flex: 1,
-                                background: 'transparent',
-                                border: 'none',
-                                outline: 'none',
-                                padding: '0.5rem',
-                                color: 'var(--color-text-primary)',
-                                fontSize: '0.875rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                background: 'var(--color-bg-tertiary)',
+                                borderRadius: '10px',
+                                border: '1px solid var(--color-border)',
+                                padding: '0 0.75rem',
+                                transition: 'border-color 0.2s',
                             }}
-                        />
-                    </div>
-                </form>
+                        >
+                            <Search size={16} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => handleSearchInput(e.target.value)}
+                                onFocus={() => { if (searchResults) setShowDropdown(true) }}
+                                placeholder="Search components & users..."
+                                style={{
+                                    flex: 1,
+                                    background: 'transparent',
+                                    border: 'none',
+                                    outline: 'none',
+                                    padding: '0.5rem',
+                                    color: 'var(--color-text-primary)',
+                                    fontSize: '0.875rem',
+                                }}
+                            />
+                        </div>
+                    </form>
+
+                    {/* Search Dropdown */}
+                    {showDropdown && searchResults && (searchResults.users.length > 0 || searchResults.components.length > 0) && (
+                        <div
+                            className="glass"
+                            style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: 0,
+                                right: 0,
+                                marginTop: '0.375rem',
+                                borderRadius: '12px',
+                                overflow: 'hidden',
+                                zIndex: 60,
+                                boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+                                maxHeight: '400px',
+                                overflowY: 'auto',
+                            }}
+                        >
+                            {/* Users Section */}
+                            {searchResults.users.length > 0 && (
+                                <div style={{ padding: '0.5rem' }}>
+                                    <div style={{ padding: '0.25rem 0.5rem', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                        Users
+                                    </div>
+                                    {searchResults.users.map((user) => (
+                                        <button
+                                            key={user.id}
+                                            onClick={() => navigateAndClose(`/profile/${user.username}`)}
+                                            className="transition-base"
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.625rem',
+                                                width: '100%',
+                                                padding: '0.5rem',
+                                                borderRadius: '8px',
+                                                border: 'none',
+                                                background: 'transparent',
+                                                cursor: 'pointer',
+                                                textAlign: 'left',
+                                                color: 'var(--color-text-primary)',
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-bg-tertiary)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                        >
+                                            <Avatar src={user.avatarUrl} alt={user.username} size={28} fallback={user.username} />
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontSize: '0.8125rem', fontWeight: 600 }}>{user.username}</div>
+                                                <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)' }}>
+                                                    {user._count.components} component{user._count.components !== 1 ? 's' : ''}
+                                                </div>
+                                            </div>
+                                            <User size={14} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Divider */}
+                            {searchResults.users.length > 0 && searchResults.components.length > 0 && (
+                                <div style={{ height: '1px', background: 'var(--color-border)', margin: '0 0.5rem' }} />
+                            )}
+
+                            {/* Components Section */}
+                            {searchResults.components.length > 0 && (
+                                <div style={{ padding: '0.5rem' }}>
+                                    <div style={{ padding: '0.25rem 0.5rem', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                        Components
+                                    </div>
+                                    {searchResults.components.map((comp) => (
+                                        <button
+                                            key={comp.id}
+                                            onClick={() => navigateAndClose(`/component/${comp.id}`)}
+                                            className="transition-base"
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.625rem',
+                                                width: '100%',
+                                                padding: '0.5rem',
+                                                borderRadius: '8px',
+                                                border: 'none',
+                                                background: 'transparent',
+                                                cursor: 'pointer',
+                                                textAlign: 'left',
+                                                color: 'var(--color-text-primary)',
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-bg-tertiary)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                        >
+                                            <div style={{
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                width: '28px', height: '28px', borderRadius: '6px',
+                                                background: 'rgba(99, 102, 241, 0.1)', flexShrink: 0,
+                                            }}>
+                                                <Code2 size={14} style={{ color: 'var(--color-brand-light)' }} />
+                                            </div>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontSize: '0.8125rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{comp.title}</div>
+                                                <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)' }}>
+                                                    by {comp.author.username}
+                                                </div>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
 
                 {/* Right Actions */}
                 <div style={{
@@ -362,8 +519,8 @@ export function Navbar() {
                             <input
                                 type="text"
                                 value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Search components..."
+                                onChange={(e) => handleSearchInput(e.target.value)}
+                                placeholder="Search components & users..."
                                 style={{
                                     flex: 1,
                                     background: 'transparent',
