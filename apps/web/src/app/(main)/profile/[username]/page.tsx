@@ -15,11 +15,13 @@ import {
     Trash2,
     RotateCcw,
     Loader2,
+    Eye,
+    Bookmark,
 } from 'lucide-react'
 import { formatDate } from '@openui/ui'
 import type { ComponentWithAuthor } from '@/types'
 
-type Tab = 'components' | 'forks' | 'archived'
+type Tab = 'components' | 'forks' | 'archived' | 'saved'
 
 export default function ProfilePage({
     params,
@@ -30,11 +32,14 @@ export default function ProfilePage({
     const { data: session } = useSession()
 
     const [components, setComponents] = useState<ComponentWithAuthor[]>([])
+    const [savedComponents, setSavedComponents] = useState<ComponentWithAuthor[]>([])
     const [userVotes, setUserVotes] = useState<Record<string, number>>({})
     const [loading, setLoading] = useState(true)
     const [profileUser, setProfileUser] = useState<any>(null)
     const [tab, setTab] = useState<Tab>('components')
     const [actionLoading, setActionLoading] = useState<string | null>(null)
+    const [totalViews, setTotalViews] = useState(0)
+    const [uniqueViews, setUniqueViews] = useState(0)
 
     const isOwnProfile = session?.user?.id && profileUser?.id === session.user.id
 
@@ -50,7 +55,22 @@ export default function ProfilePage({
                 const data = await res.json()
                 setComponents(data.items || [])
                 setUserVotes(data.userVotes ?? {})
-                if (data.profileUser) setProfileUser(data.profileUser)
+                if (data.profileUser) {
+                    setProfileUser(data.profileUser)
+                    setTotalViews(data.profileUser.totalViews || 0)
+                    setUniqueViews(data.profileUser.uniqueViews || 0)
+                }
+
+                if (session?.user?.id) {
+                    const savedRes = await fetch(`/api/users/me/saved`)
+                    if (savedRes.ok) {
+                        const savedData = await savedRes.json()
+                        setSavedComponents(savedData.items || [])
+                        if (savedData.userVotes) {
+                            setUserVotes(prev => ({ ...prev, ...savedData.userVotes }))
+                        }
+                    }
+                }
             } catch (error) {
                 console.error('Failed to load profile', error)
             } finally {
@@ -58,7 +78,7 @@ export default function ProfilePage({
             }
         }
         load()
-    }, [username])
+    }, [username, session?.user?.id])
 
     async function handleArchive(componentId: string) {
         setActionLoading(componentId)
@@ -94,11 +114,17 @@ export default function ProfilePage({
     const archivedComponents = components.filter((c) => c.published === false)
     const totalScore = publishedComponents.reduce((sum, c) => sum + c.voteScore, 0)
 
-    const displayComponents = { components: userOriginals, forks: userForks, archived: archivedComponents }[tab]
+    const displayComponents = {
+        components: userOriginals,
+        forks: userForks,
+        archived: archivedComponents,
+        saved: savedComponents,
+    }[tab]
 
     const tabs: { key: Tab; label: string; count: number }[] = [
         { key: 'components', label: 'Components', count: userOriginals.length },
         { key: 'forks', label: 'Forks', count: userForks.length },
+        ...(isOwnProfile ? [{ key: 'saved' as Tab, label: 'Saved', count: savedComponents.length }] : []),
         ...(isOwnProfile && archivedComponents.length > 0
             ? [{ key: 'archived' as Tab, label: 'Archived', count: archivedComponents.length }]
             : []),
@@ -129,6 +155,8 @@ export default function ProfilePage({
                     <div style={{ display: 'flex', gap: '1.25rem', color: 'var(--color-text-secondary)', fontSize: '0.8125rem', flexWrap: 'wrap' }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><Code2 size={14} />{userOriginals.length} components</span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><GitFork size={14} />{userForks.length} forks</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><Eye size={14} />{uniqueViews} unique views</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><Eye size={14} />{totalViews} total views</span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><Star size={14} />{totalScore} score</span>
                         {profileUser?.createdAt && (
                             <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><Calendar size={14} />Joined {formatDate(profileUser.createdAt)}</span>
@@ -153,6 +181,7 @@ export default function ProfilePage({
                         }}
                     >
                         {t.key === 'archived' && <Archive size={13} />}
+                        {t.key === 'saved' && <Bookmark size={13} />}
                         {t.label} ({t.count})
                     </button>
                 ))}
@@ -203,7 +232,7 @@ export default function ProfilePage({
                 </div>
             ) : (
                 <EmptyState
-                    title={tab === 'archived' ? 'No archived components' : `No ${tab === 'forks' ? 'forks' : 'components'} yet`}
+                    title={tab === 'archived' ? 'No archived components' : tab === 'saved' ? 'No saved components' : `No ${tab === 'forks' ? 'forks' : 'components'} yet`}
                     actionLabel={isOwnProfile && tab === 'components' ? 'Post your first component' : undefined}
                     actionHref={isOwnProfile && tab === 'components' ? '/component/new' : undefined}
                     actionIcon={<Code2 size={16} />}
