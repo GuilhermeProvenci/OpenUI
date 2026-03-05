@@ -30,7 +30,7 @@ Components render in a sandboxed iframe with React 18 + Babel, so users see live
 | Framework | Next.js 16 (App Router) |
 | Language | TypeScript (strict) |
 | Database | PostgreSQL (Neon / Supabase) |
-| ORM | Prisma 5 |
+| ORM | Prisma 7 |
 | Auth | NextAuth.js v4 (GitHub OAuth) |
 | Rate Limiting | Upstash Redis |
 | Code Editor | Monaco Editor |
